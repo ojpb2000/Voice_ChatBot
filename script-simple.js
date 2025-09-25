@@ -216,7 +216,7 @@ function onRecognitionResult(event) {
     // Agregar mensaje del usuario
     addMessage(transcript, 'user');
     
-    // Usar backend si está disponible; si falla, simular
+    // Prefer streaming; fallback to non-streaming; then to simulation
     handleResponse(transcript);
 }
 
@@ -265,6 +265,20 @@ async function handleResponse(userMessage) {
     // Intentar backend primero
     if (backendAvailable) {
         showTypingIndicator();
+        let accumulated = '';
+        const streamingOk = await streamFromBackend(
+            userMessage,
+            (token) => {
+                accumulated += token;
+                renderStreaming(accumulated);
+            },
+            () => {
+                finalizeStreaming(accumulated);
+            }
+        );
+        if (streamingOk) return;
+
+        // Fallback to non-streaming
         const backendReply = await sendToBackend(userMessage);
         if (backendReply) {
             addMessage(backendReply, 'bot');
@@ -380,6 +394,50 @@ async function sendToBackend(message) {
     }
 }
 
+// Streaming via SSE
+async function streamFromBackend(message, onToken, onDone) {
+    if (!backendAvailable || !BACKEND_URL) {
+        return false;
+    }
+    try {
+        const url = `${BACKEND_URL}/api/chat/stream?` + new URLSearchParams({ message });
+        const response = await fetch(url, { headers: { Accept: 'text/event-stream' } });
+        if (!response.ok || !response.body) return false;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
+            buffer = parts.pop() || '';
+            for (const part of parts) {
+                const line = part.trim();
+                if (!line.startsWith('data:')) continue;
+                const payload = line.replace(/^data:\s*/, '');
+                if (payload === '[DONE]') {
+                    onDone?.();
+                    return true;
+                }
+                try {
+                    const { token, error } = JSON.parse(payload);
+                    if (error) {
+                        onDone?.();
+                        return true;
+                    }
+                    if (token) onToken?.(token);
+                } catch (_) {}
+            }
+        }
+        onDone?.();
+        return true;
+    } catch (e) {
+        console.error('Streaming failed:', e);
+        return false;
+    }
+}
+
 // Agregar mensaje al chat
 function addMessage(text, sender) {
     const messageDiv = document.createElement('div');
@@ -403,6 +461,60 @@ function addMessage(text, sender) {
     if (sender === 'bot') {
         speakResponseBtn.style.display = 'flex';
         currentSession = text;
+    }
+}
+
+// Incremental render while streaming
+let streamingNode = null;
+function renderStreaming(text) {
+    if (!streamingNode) {
+        streamingNode = document.createElement('div');
+        streamingNode.className = 'message bot-message';
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = '👩‍⚕️';
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        content.innerHTML = '<p></p>';
+        streamingNode.appendChild(avatar);
+        streamingNode.appendChild(content);
+        chatMessages.appendChild(streamingNode);
+    }
+    const p = streamingNode.querySelector('p');
+    p.textContent = text;
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    // Speak sentence by sentence
+    speakCompletedSentences(text);
+}
+
+function finalizeStreaming(fullText) {
+    hideTypingIndicator();
+    currentSession = fullText;
+    speakCompletedSentences(fullText, true);
+    streamingNode = null;
+}
+
+// Sentence-level TTS with barge-in support
+let spokenChars = 0;
+function speakCompletedSentences(text, forceEnd = false) {
+    // Cancel if user starts talking (barge-in)
+    if (isListening) {
+        synthesis.cancel();
+        return;
+    }
+    const sentences = text.match(/[^.!?]+[.!?]/g) || [];
+    let toSpeak = sentences.join('');
+    if (!forceEnd) {
+        // Drop the last sentence if not ended with punctuation
+        if (!/[.!?]\s*$/.test(text)) {
+            toSpeak = sentences.slice(0, -1).join('');
+        }
+    }
+    if (!toSpeak) return;
+    const chunk = toSpeak.slice(spokenChars);
+    if (chunk.length > 0) {
+        spokenChars += chunk.length;
+        speakText(chunk);
     }
 }
 

@@ -86,6 +86,102 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Streaming chat via Server-Sent Events (SSE)
+app.get('/api/chat/stream', async (req, res) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
+    }
+
+    const userMessage = (req.query.message || '').toString();
+    if (!userMessage) {
+      return res.status(400).json({ error: 'Missing message' });
+    }
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+
+    const systemPrompt = `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Speak English (en-US). Concise, empathetic, warm. 2-3 sentences unless asked to elaborate. No medical advice; share personal experience and options to discuss with a doctor.`;
+
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.7,
+        stream: true,
+        max_tokens: 300
+      })
+    });
+
+    if (!response.ok || !response.body) {
+      res.write(`data: ${JSON.stringify({ error: 'Upstream error' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
+    }
+
+    const decoder = new TextDecoder('utf-8');
+    const reader = response.body.getReader();
+    let buffer = '';
+
+    const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+    // Heartbeat
+    const ping = setInterval(() => res.write(': ping\n\n'), 15000);
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.replace(/^data:\s*/, '');
+        if (payload === '[DONE]') {
+          res.write('data: [DONE]\n\n');
+          clearInterval(ping);
+          return res.end();
+        }
+        try {
+          const json = JSON.parse(payload);
+          const token = json?.choices?.[0]?.delta?.content;
+          if (typeof token === 'string' && token.length) {
+            send({ token });
+          }
+        } catch (e) {
+          // ignore malformed lines
+        }
+      }
+    }
+
+    clearInterval(ping);
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (err) {
+    try {
+      res.write(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (_) {}
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });

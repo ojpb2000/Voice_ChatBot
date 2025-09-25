@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot de Audio - Jessica Taylor</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <div class="login-card">
+                <div class="logo">
+                    <h1>🎤 Voice ChatBot</h1>
+                    <p>Conversa con Jessica Taylor</p>
+                </div>
+                
+                <form id="loginForm" class="login-form">
+                    <div class="input-group">
+                        <label for="username">Usuario</label>
+                        <input type="text" id="username" name="username" required placeholder="Ingresa tu usuario">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" name="password" required placeholder="Ingresa tu contraseña">
+                    </div>
+                    
+                    <button type="submit" class="login-btn">
+                        <span class="btn-text">Iniciar Sesión</span>
+                        <span class="btn-loading" style="display: none;">Iniciando...</span>
+                    </button>
+                </form>
+                
+                <div id="loginError" class="error-message" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla del Chatbot -->
+    <div id="chatScreen" class="screen">
+        <div class="chat-container">
+            <!-- Header -->
+            <div class="chat-header">
+                <div class="user-info">
+                    <div class="avatar">👩‍⚕️</div>
+                    <div class="user-details">
+                        <h2>Jessica Taylor</h2>
+                        <p>Diabetes Type 1 • 32 años</p>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div id="chatMessages" class="chat-messages">
+                    <div class="message bot-message">
+                        <div class="message-avatar">👩‍⚕️</div>
+                        <div class="message-content">
+                            <p>¡Hola! Soy Jessica. Me alegra conocerte. ¿Cómo estás hoy? ¿Hay algo específico sobre el manejo de la diabetes que te gustaría conversar?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audio Controls -->
+            <div class="audio-controls">
+                <div class="voice-indicator">
+                    <div id="voiceStatus" class="voice-status">Listo para escuchar</div>
+                    <div id="voiceLevel" class="voice-level"></div>
+                </div>
+                
+                <div class="control-buttons">
+                    <button id="startListening" class="control-btn listen-btn">
+                        <span class="btn-icon">🎤</span>
+                        <span class="btn-text">Hablar</span>
+                    </button>
+                    
+                    <button id="stopListening" class="control-btn stop-btn" style="display: none;">
+                        <span class="btn-icon">⏹️</span>
+                        <span class="btn-text">Detener</span>
+                    </button>
+                    
+                    <button id="speakResponse" class="control-btn speak-btn" style="display: none;">
+                        <span class="btn-icon">🔊</span>
+                        <span class="btn-text">Repetir</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div id="connectionStatus" class="status-item">
+                    <span class="status-icon">🟢</span>
+                    <span>Conectado</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">🎯</span>
+                    <span>Modo: Conversación</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Procesando...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

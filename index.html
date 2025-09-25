@@ -1,36 +1,36 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot de Audio - Jessica Taylor</title>
+    <title>Voice Chatbot - Jessica Taylor</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Pantalla de Login -->
+    <!-- Login Screen -->
     <div id="loginScreen" class="screen active">
         <div class="login-container">
             <div class="login-card">
                 <div class="logo">
                     <h1>🎤 Voice ChatBot</h1>
-                    <p>Conversa con Jessica Taylor</p>
+                    <p>Talk with Jessica Taylor</p>
                 </div>
                 
                 <form id="loginForm" class="login-form">
                     <div class="input-group">
-                        <label for="username">Usuario</label>
-                        <input type="text" id="username" name="username" required placeholder="Ingresa tu usuario">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required placeholder="Enter your username">
                     </div>
                     
                     <div class="input-group">
-                        <label for="password">Contraseña</label>
-                        <input type="password" id="password" name="password" required placeholder="Ingresa tu contraseña">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="Enter your password">
                     </div>
                     
                     <button type="submit" class="login-btn">
-                        <span class="btn-text">Iniciar Sesión</span>
-                        <span class="btn-loading" style="display: none;">Iniciando...</span>
+                        <span class="btn-text">Sign In</span>
+                        <span class="btn-loading" style="display: none;">Signing in...</span>
                     </button>
                 </form>
                 
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <!-- Pantalla del Chatbot -->
+    <!-- Chat Screen -->
     <div id="chatScreen" class="screen">
         <div class="chat-container">
             <!-- Header -->
@@ -48,10 +48,10 @@
                     <div class="avatar">👩‍⚕️</div>
                     <div class="user-details">
                         <h2>Jessica Taylor</h2>
-                        <p>Diabetes Type 1 • 32 años</p>
+                        <p>Type 1 Diabetes • 32 years old</p>
                     </div>
                 </div>
-                <button id="logoutBtn" class="logout-btn">Cerrar Sesión</button>
+                <button id="logoutBtn" class="logout-btn">Log Out</button>
             </div>
 
             <!-- Chat Area -->
@@ -60,7 +60,7 @@
                     <div class="message bot-message">
                         <div class="message-avatar">👩‍⚕️</div>
                         <div class="message-content">
-                            <p>¡Hola! Soy Jessica Taylor, tengo 32 años y vivo con diabetes tipo 1 desde la adolescencia. Me alegra conocerte. ¿Cómo estás manejando todo? ¿Hay algo específico sobre el día a día con diabetes que te gustaría conversar?</p>
+                            <p>Hi! I'm Jessica Taylor, I'm 32 and I've lived with Type 1 Diabetes since my teens. Nice to meet you. How are you managing everything? Is there anything specific about day-to-day diabetes you'd like to talk about?</p>
                         </div>
                     </div>
                 </div>
@@ -69,24 +69,24 @@
             <!-- Audio Controls -->
             <div class="audio-controls">
                 <div class="voice-indicator">
-                    <div id="voiceStatus" class="voice-status">Listo para escuchar</div>
+                    <div id="voiceStatus" class="voice-status">Ready to listen</div>
                     <div id="voiceLevel" class="voice-level"></div>
                 </div>
                 
                 <div class="control-buttons">
                     <button id="startListening" class="control-btn listen-btn">
                         <span class="btn-icon">🎤</span>
-                        <span class="btn-text">Hablar</span>
+                        <span class="btn-text">Speak</span>
                     </button>
                     
                     <button id="stopListening" class="control-btn stop-btn" style="display: none;">
                         <span class="btn-icon">⏹️</span>
-                        <span class="btn-text">Detener</span>
+                        <span class="btn-text">Stop</span>
                     </button>
                     
                     <button id="speakResponse" class="control-btn speak-btn" style="display: none;">
                         <span class="btn-icon">🔊</span>
-                        <span class="btn-text">Repetir</span>
+                        <span class="btn-text">Replay</span>
                     </button>
                 </div>
             </div>
@@ -95,11 +95,11 @@
             <div class="status-bar">
                 <div id="connectionStatus" class="status-item">
                     <span class="status-icon">🟢</span>
-                    <span>Conectado</span>
+                    <span>Connected</span>
                 </div>
                 <div class="status-item">
                     <span class="status-icon">🎯</span>
-                    <span>Modo: Conversación</span>
+                    <span>Mode: Conversation</span>
                 </div>
             </div>
         </div>
@@ -109,13 +109,12 @@
     <div id="loadingOverlay" class="loading-overlay" style="display: none;">
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <p>Procesando...</p>
+            <p>Processing...</p>
         </div>
     </div>
 
         <script>
-            // Configura aquí tu backend cuando lo despliegues en Render
-            // window.BACKEND_URL = 'https://tu-servicio.onrender.com';
+                window.BACKEND_URL = 'https://voice-chatbot-a9u5.onrender.com';
         </script>
         <script src="script-simple.js"></script>
 </body>

@@ -20,7 +20,7 @@ const voiceLevel = document.getElementById('voiceLevel');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const connectionStatus = document.getElementById('connectionStatus');
 
-// Inicialización
+// Initialization
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
@@ -28,22 +28,22 @@ document.addEventListener('DOMContentLoaded', function() {
     detectBackend();
 });
 
-// Inicializar la aplicación
+// Initialize app
 function initializeApp() {
-    // Verificar soporte para Web Speech API
+    // Check Web Speech API support
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        showError('Tu navegador no soporta reconocimiento de voz. Por favor usa Chrome, Edge o Safari.');
+        showError('Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.');
         return;
     }
 
-    // Configurar Speech Recognition
+    // Configure Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = 'es-ES';
+    recognition.lang = 'en-US';
 
-    // Configurar Speech Synthesis
+    // Configure Speech Synthesis
     synthesis = window.speechSynthesis;
 
     // Event listeners para recognition
@@ -52,10 +52,10 @@ function initializeApp() {
     recognition.onerror = onRecognitionError;
     recognition.onend = onRecognitionEnd;
 
-    console.log('Aplicación inicializada correctamente');
+    console.log('App initialized');
 }
 
-// Configurar event listeners
+// Setup event listeners
 function setupEventListeners() {
     // Login form
     loginForm.addEventListener('submit', handleLogin);
@@ -72,39 +72,36 @@ function setupEventListeners() {
     document.addEventListener('keydown', handleKeyboard);
 }
 
-// Verificar autenticación (simplificado para GitHub Pages)
+// Check authentication (simplified for GitHub Pages)
 function checkAuthentication() {
-    const isAuthenticated = localStorage.getItem('authenticated') === 'true';
-    if (isAuthenticated) {
-        showChatScreen();
-    } else {
-        showLoginScreen();
-    }
+    // Force login screen by default
+    localStorage.removeItem('authenticated');
+    showLoginScreen();
 }
 
-// Manejar login (simplificado)
+// Handle login (demo)
 function handleLogin(e) {
     e.preventDefault();
     
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    // Credenciales hardcodeadas para demo
+    // Demo credentials
     if (username === 'gato' && password === 'gato123') {
         localStorage.setItem('authenticated', 'true');
         showChatScreen();
     } else {
-        showError('Credenciales inválidas');
+        showError('Invalid credentials');
     }
 }
 
-// Manejar logout
+// Handle logout
 function handleLogout() {
     localStorage.removeItem('authenticated');
     showLoginScreen();
 }
 
-// Mostrar pantalla de login
+// Show login screen
 function showLoginScreen() {
     loginScreen.classList.add('active');
     chatScreen.classList.remove('active');
@@ -113,19 +110,19 @@ function showLoginScreen() {
     hideError();
 }
 
-// Mostrar pantalla de chat
+// Show chat screen
 function showChatScreen() {
     loginScreen.classList.remove('active');
     chatScreen.classList.add('active');
     updateConnectionStatus(backendAvailable);
 }
 
-// Mostrar/ocultar loading
+// Show/hide loading
 function showLoading(show) {
     loadingOverlay.style.display = show ? 'flex' : 'none';
 }
 
-// Mostrar indicador de "typing"
+// Show typing indicator
 function showTypingIndicator() {
     const typingDiv = document.createElement('div');
     typingDiv.className = 'message bot-message typing-indicator';
@@ -137,7 +134,7 @@ function showTypingIndicator() {
     
     const content = document.createElement('div');
     content.className = 'message-content';
-    content.innerHTML = '<p>Jessica está escribiendo...</p>';
+    content.innerHTML = '<p>Jessica is typing...</p>';
     
     typingDiv.appendChild(avatar);
     typingDiv.appendChild(content);
@@ -146,7 +143,7 @@ function showTypingIndicator() {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Ocultar indicador de "typing"
+// Hide typing indicator
 function hideTypingIndicator() {
     const typingIndicator = document.getElementById('typing-indicator');
     if (typingIndicator) {
@@ -154,35 +151,35 @@ function hideTypingIndicator() {
     }
 }
 
-// Mostrar error
+// Show error
 function showError(message) {
     loginError.textContent = message;
     loginError.style.display = 'block';
 }
 
-// Ocultar error
+// Hide error
 function hideError() {
     loginError.style.display = 'none';
 }
 
-// Actualizar estado de conexión
+// Update connection status
 function updateConnectionStatus(connected) {
     const statusIcon = connectionStatus.querySelector('.status-icon');
     const statusText = connectionStatus.querySelector('span:last-child');
     
     if (connected) {
         statusIcon.textContent = '🟢';
-        statusText.textContent = 'Conectado';
+        statusText.textContent = 'Connected';
     } else {
         statusIcon.textContent = '🔴';
-        statusText.textContent = 'Desconectado';
+        statusText.textContent = 'Disconnected';
     }
 }
 
-// Iniciar escucha
+// Start listening
 function startListening() {
     if (!recognition) {
-        showError('Reconocimiento de voz no disponible');
+        showError('Speech recognition not available');
         return;
     }
 
@@ -190,31 +187,31 @@ function startListening() {
         recognition.start();
         isListening = true;
         updateListeningUI(true);
-        voiceStatus.textContent = 'Escuchando...';
+        voiceStatus.textContent = 'Listening...';
         voiceLevel.classList.add('active');
     } catch (error) {
-        console.error('Error iniciando reconocimiento:', error);
-        showError('Error iniciando el micrófono');
+        console.error('Error starting recognition:', error);
+        showError('Error starting the microphone');
     }
 }
 
-// Detener escucha
+// Stop listening
 function stopListening() {
     if (recognition && isListening) {
         recognition.stop();
     }
 }
 
-// Eventos de reconocimiento de voz
+// Recognition events
 function onRecognitionStart() {
-    console.log('Reconocimiento iniciado');
-    voiceStatus.textContent = 'Escuchando...';
+    console.log('Recognition started');
+    voiceStatus.textContent = 'Listening...';
     startListeningBtn.classList.add('listening');
 }
 
 function onRecognitionResult(event) {
     const transcript = event.results[0][0].transcript;
-    console.log('Texto reconocido:', transcript);
+    console.log('Recognized text:', transcript);
     
     // Agregar mensaje del usuario
     addMessage(transcript, 'user');
@@ -224,18 +221,18 @@ function onRecognitionResult(event) {
 }
 
 function onRecognitionError(event) {
-    console.error('Error en reconocimiento:', event.error);
-    let errorMessage = 'Error en el reconocimiento de voz';
+    console.error('Recognition error:', event.error);
+    let errorMessage = 'Speech recognition error';
     
     switch (event.error) {
         case 'no-speech':
-            errorMessage = 'No se detectó habla. Intenta nuevamente.';
+            errorMessage = 'No speech detected. Please try again.';
             break;
         case 'audio-capture':
-            errorMessage = 'Error accediendo al micrófono.';
+            errorMessage = 'Error accessing the microphone.';
             break;
         case 'not-allowed':
-            errorMessage = 'Permisos de micrófono denegados.';
+            errorMessage = 'Microphone permissions denied.';
             break;
     }
     
@@ -244,23 +241,23 @@ function onRecognitionError(event) {
 }
 
 function onRecognitionEnd() {
-    console.log('Reconocimiento finalizado');
+    console.log('Recognition ended');
     updateListeningUI(false);
     voiceLevel.classList.remove('active');
 }
 
-// Actualizar UI de escucha
+// Update listening UI
 function updateListeningUI(listening) {
     isListening = listening;
     
     if (listening) {
         startListeningBtn.style.display = 'none';
         stopListeningBtn.style.display = 'flex';
-        voiceStatus.textContent = 'Escuchando...';
+        voiceStatus.textContent = 'Listening...';
     } else {
         startListeningBtn.style.display = 'flex';
         stopListeningBtn.style.display = 'none';
-        voiceStatus.textContent = 'Listo para escuchar';
+        voiceStatus.textContent = 'Ready to listen';
     }
 }
 
@@ -282,7 +279,7 @@ async function handleResponse(userMessage) {
     simulateJessicaResponse(userMessage);
 }
 
-// Simulación local
+// Local simulation
 function simulateJessicaResponse(userMessage) {
     // Mostrar indicador de "typing" más rápido
     showTypingIndicator();
@@ -292,35 +289,35 @@ function simulateJessicaResponse(userMessage) {
         const message = userMessage.toLowerCase();
         let response = "";
         
-        // Respuestas contextuales auténticas de Jessica Taylor
+        // Authentic contextual responses (English)
         if (message.includes('hola') || message.includes('hi') || message.includes('hello')) {
-            response = "¡Hola! Soy Jessica, tengo 32 años y vivo en West Virginia. Fui diagnosticada con diabetes tipo 1 en la adolescencia. ¿Cómo estás manejando todo?";
+            response = "Hi! I'm Jessica, 32, living in West Virginia. I was diagnosed with Type 1 in my teens. How are you managing things today?";
         } else if (message.includes('diabetes') || message.includes('azúcar') || message.includes('glucosa')) {
-            response = "He estado usando bombas de insulina y CGMs por años, pero honestamente, no siempre estoy satisfecha con las opciones actuales. La tecnología ha mejorado, pero aún hay días complicados.";
+            response = "I've used pumps and CGMs for years. Tech helps, but some days are still tough and the mental load is real.";
         } else if (message.includes('costo') || message.includes('dinero') || message.includes('caro') || message.includes('seguro')) {
-            response = "Ugh, los costos son una pesadilla. Con un ingreso familiar de $60k-$65k, cada dispositivo es una decisión financiera importante. He tenido que luchar tanto con el seguro para conseguir cobertura...";
+            response = "Costs are tough. On a $60–65k household income, every device is a big decision, and insurance paperwork can be exhausting.";
         } else if (message.includes('alarma') || message.includes('ruido') || message.includes('molesto') || message.includes('fatiga')) {
-            response = "La fatiga de alarmas es real. A veces desearía que los dispositivos fueran más discretos. No quiero que la diabetes me defina, pero a veces es imposible ignorar.";
+            response = "Alarm fatigue is real. I want devices that are discreet and reliable so diabetes doesn’t take over every moment.";
         } else if (message.includes('comunidad') || message.includes('ayuda') || message.includes('apoyo') || message.includes('reddit')) {
-            response = "Encuentro mucha ayuda en Reddit y grupos de diabetes en Twitter. La comunidad T1D es increíble - compartimos hacks, nos apoyamos en los días malos, y a veces hasta nos reímos juntos de las situaciones absurdas.";
+            response = "Reddit and T1D Twitter help a lot—hacks, honest chats, and support for the rough days. Community matters.";
         } else if (message.includes('comida') || message.includes('receta') || message.includes('cocinar') || message.includes('pinterest')) {
-            response = "Me encanta Pinterest para recetas bajas en carbohidratos. Vivo con mi pareja y a veces cocinamos juntos. Es importante encontrar el balance entre disfrutar la comida y mantener el control.";
+            response = "I love finding low‑carb recipes on Pinterest. My partner and I try to keep things tasty but balanced.";
         } else if (message.includes('ejercicio') || message.includes('deporte') || message.includes('actividad') || message.includes('viaje')) {
-            response = "Quiero vivir una vida activa sin que la diabetes me limite. Hago ejercicio, viajo, pero siempre tengo que planificar todo. Es agotador mentalmente a veces.";
+            response = "I want an active life without diabetes getting in the way—exercise and travel take extra planning, which can be tiring.";
         } else if (message.includes('día') || message.includes('dificil') || message.includes('malo') || message.includes('estres')) {
-            response = "Algunos días mi azúcar está perfecto, otros días es un desastre total. He aprendido a no ser tan dura conmigo misma. La diabetes no me define, pero definitivamente influye en mi vida diaria.";
+            response = "Some days my numbers are great, others are chaos. I try not to be too hard on myself—diabetes is part of life, not all of it.";
         } else if (message.includes('tecnologia') || message.includes('dispositivo') || message.includes('bomba') || message.includes('cgm')) {
-            response = "Sigo las últimas tecnologías en Reddit y Twitter. Hay mucha emoción (y escepticismo) sobre nuevos dispositivos. Lo que más busco es confiabilidad, discreción y que sea fácil de usar.";
+            response = "I follow new tech on Reddit/Twitter—there’s excitement and skepticism. I care most about reliability, discretion, and easy data sharing.";
         } else if (message.includes('trabajo') || message.includes('carrera') || message.includes('profesional')) {
-            response = "Soy graduada universitaria y trabajo en un suburbio. A veces es complicado manejar la diabetes en el trabajo, especialmente cuando las alarmas suenan en reuniones importantes.";
+            response = "I’m a college grad and work in a suburban area. Managing alarms during meetings can be awkward, so I plan ahead.";
         } else {
-            // Respuestas generales auténticas de Jessica
+            // General authentic responses
             const generalResponses = [
-                "Como persona con diabetes tipo 1, entiendo los desafíos únicos. A veces me siento abrumada por el monitoreo constante, pero he aprendido a ser proactiva.",
-                "Valoro mi independencia, pero también aprecio el apoyo de la comunidad. En Reddit y Twitter encuentro personas que realmente entienden lo que es vivir con esto.",
-                "Busco el balance entre manejar mi salud y disfrutar la vida. No quiero que la diabetes me defina, pero reconozco que es parte de quién soy.",
-                "La tecnología ha mejorado mucho, pero aún hay días en que todo parece fallar. Es importante tener un plan B y no ser tan dura conmigo misma.",
-                "He aprendido a ser honesta sobre los desafíos sin dramatizar. La comunidad T1D valora la autenticidad - queremos que las marcas realmente nos entiendan."
+                "As someone with T1D, I get the unique challenges. The constant monitoring can be draining, so I stay proactive.",
+                "I value independence but also community—people on Reddit and Twitter really understand this life.",
+                "I’m always balancing health with enjoying life. I don’t want diabetes to define me, even if it shapes my days.",
+                "Tech helps a lot, but some days everything seems to fail at once. Having a Plan B keeps me sane.",
+                "Authenticity matters. We want brands and people to truly get it without sugarcoating."
             ];
             response = generalResponses[Math.floor(Math.random() * generalResponses.length)];
         }
@@ -409,7 +406,7 @@ function addMessage(text, sender) {
     }
 }
 
-// Hablar texto
+// Speak text
 function speakText(text) {
     if (!synthesis || isSpeaking) return;
     
@@ -417,16 +414,16 @@ function speakText(text) {
     synthesis.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-ES';
-    utterance.rate = 1.0; // Velocidad natural para mujer de 32 años
-    utterance.pitch = 1.1; // Ligeramente más alto para sonar femenino
+    utterance.lang = 'en-US';
+    utterance.rate = 1.0; // natural speed
+    utterance.pitch = 1.05; // slightly higher
     utterance.volume = 0.8;
     
     // Intentar usar una voz femenina si está disponible
     const voices = synthesis.getVoices();
     const femaleVoice = voices.find(voice => 
-        voice.lang.startsWith('es') && 
-        (voice.name.includes('Female') || voice.name.includes('Mujer') || voice.name.includes('Zira'))
+        voice.lang.startsWith('en') && 
+        (voice.name.includes('Female') || voice.name.includes('Samantha') || voice.name.includes('Zira') || voice.name.includes('Aria'))
     );
     if (femaleVoice) {
         utterance.voice = femaleVoice;
@@ -435,20 +432,20 @@ function speakText(text) {
     utterance.onstart = () => {
         isSpeaking = true;
         speakResponseBtn.classList.add('speaking');
-        voiceStatus.textContent = 'Jessica está hablando...';
+        voiceStatus.textContent = 'Jessica is speaking...';
     };
     
     utterance.onend = () => {
         isSpeaking = false;
         speakResponseBtn.classList.remove('speaking');
-        voiceStatus.textContent = 'Listo para escuchar';
+        voiceStatus.textContent = 'Ready to listen';
     };
     
     utterance.onerror = (event) => {
-        console.error('Error en síntesis de voz:', event.error);
+        console.error('Speech synthesis error:', event.error);
         isSpeaking = false;
         speakResponseBtn.classList.remove('speaking');
-        voiceStatus.textContent = 'Listo para escuchar';
+        voiceStatus.textContent = 'Ready to listen';
     };
     
     synthesis.speak(utterance);

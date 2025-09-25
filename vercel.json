@@ -4,7 +4,5 @@
       "runtime": "@vercel/node@3.0.7"
     }
   },
-  "outputDirectory": ".",
-  "buildCommand": "echo 'No build step required'",
-  "installCommand": "npm install"
+  "outputDirectory": "."
 }

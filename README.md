@@ -8,15 +8,16 @@ Un chatbot de audio en tiempo real que simula conversaciones con Jessica Taylor,
 - **Autenticación Simple**: Login con usuario y contraseña
 - **Personaje Realista**: Jessica Taylor con personalidad y experiencias auténticas
 - **Interfaz Moderna**: Diseño responsive y intuitivo
-- **Deployment en Vercel**: Configurado para deployment automático
+- **Frontend en GitHub Pages**: Despliegue estático
+- **Backend opcional en Render**: Respuestas reales con OpenAI
 
 ## 🛠️ Tecnologías
 
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Backend**: Node.js con Vercel Serverless Functions
+- **Backend**: Node.js (Express en Render)
 - **Audio**: Web Speech API (SpeechRecognition + SpeechSynthesis)
-- **IA**: OpenAI GPT-3.5-turbo
-- **Deployment**: Vercel
+- **IA**: OpenAI (modelos configurables, por defecto `gpt-4o-mini`)
+- **Deployment**: GitHub Pages (frontend) + Render (backend)
 
 ## 📋 Requisitos
 
@@ -54,7 +55,26 @@ Un chatbot de audio en tiempo real que simula conversaciones con Jessica Taylor,
    npm run dev
    ```
 
-## 🚀 Deployment en Vercel
+## 🚀 Backend en Render
+
+1. Crear servicio Web en Render apuntando a este repo (branch main)
+   - Runtime: Node
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+   - Render setea `PORT` automáticamente
+   - Variables de entorno:
+     - `OPENAI_API_KEY` (requerido)
+     - `ALLOWED_ORIGINS` (opcional, coma-separado; ej: `https://ojpb2000.github.io`)
+     - `OPENAI_MODEL` (opcional; default `gpt-4o-mini`)
+
+2. Endpoints disponibles
+   - `GET /api/health` → estado del servicio
+   - `POST /api/chat` → body `{ message: string, history?: [{role, content}] }`
+
+3. Frontend (GitHub Pages)
+   - Llama al backend configurando la URL del backend en el JS si se desea.
+
+## 🚀 Deployment en Vercel (histórico)
 
 ### Paso 1: Subir a GitHub
 1. Crear un nuevo repositorio en GitHub

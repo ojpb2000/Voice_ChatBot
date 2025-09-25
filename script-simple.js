@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
     checkAuthentication();
+    detectBackend();
 });
 
 // Inicializar la aplicación
@@ -116,7 +117,7 @@ function showLoginScreen() {
 function showChatScreen() {
     loginScreen.classList.remove('active');
     chatScreen.classList.add('active');
-    updateConnectionStatus(true);
+    updateConnectionStatus(backendAvailable);
 }
 
 // Mostrar/ocultar loading
@@ -218,8 +219,8 @@ function onRecognitionResult(event) {
     // Agregar mensaje del usuario
     addMessage(transcript, 'user');
     
-    // Simular respuesta de Jessica (sin API externa)
-    simulateJessicaResponse(transcript);
+    // Usar backend si está disponible; si falla, simular
+    handleResponse(transcript);
 }
 
 function onRecognitionError(event) {
@@ -263,7 +264,25 @@ function updateListeningUI(listening) {
     }
 }
 
-// Simular respuesta de Jessica (sin API externa)
+async function handleResponse(userMessage) {
+    // Intentar backend primero
+    if (backendAvailable) {
+        showTypingIndicator();
+        const backendReply = await sendToBackend(userMessage);
+        if (backendReply) {
+            addMessage(backendReply, 'bot');
+            speakText(backendReply);
+            hideTypingIndicator();
+            return;
+        }
+        hideTypingIndicator();
+    }
+
+    // Simular respuesta de Jessica (sin API externa)
+    simulateJessicaResponse(userMessage);
+}
+
+// Simulación local
 function simulateJessicaResponse(userMessage) {
     // Mostrar indicador de "typing" más rápido
     showTypingIndicator();
@@ -314,6 +333,54 @@ function simulateJessicaResponse(userMessage) {
         
         hideTypingIndicator();
     }, 800);
+}
+
+// ==========================
+// Backend opcional (Render)
+// ==========================
+let backendAvailable = false;
+let BACKEND_URL = '';
+
+function detectBackend() {
+    // Configurable: asigna aquí tu URL de Render cuando esté desplegado
+    // Ej: https://voice-chatbot-backend.onrender.com
+    BACKEND_URL = window.BACKEND_URL || '';
+
+    if (!BACKEND_URL) {
+        console.log('Backend no configurado. Usando simulación local.');
+        backendAvailable = false;
+        return;
+    }
+
+    fetch(`${BACKEND_URL}/api/health`, { method: 'GET' })
+        .then(r => r.json())
+        .then(data => {
+            backendAvailable = !!data?.ok;
+            updateConnectionStatus(backendAvailable);
+        })
+        .catch(() => {
+            backendAvailable = false;
+            updateConnectionStatus(false);
+        });
+}
+
+async function sendToBackend(message) {
+    if (!backendAvailable || !BACKEND_URL) {
+        return null;
+    }
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+        if (!response.ok) throw new Error('Bad response');
+        const data = await response.json();
+        return data?.reply || null;
+    } catch (e) {
+        console.error('Fallo llamando al backend:', e);
+        return null;
+    }
 }
 
 // Agregar mensaje al chat

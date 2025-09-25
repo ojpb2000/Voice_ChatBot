@@ -44,7 +44,7 @@ CONVERSACIÓN:
 
 Responde como Jessica Taylor en primera persona, siendo genuina y empática.`;
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

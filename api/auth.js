@@ -16,7 +16,7 @@ function generateSessionId() {
 // Almacenamiento simple de sesiones (en producción usar Redis o similar)
 const sessions = {};
 
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

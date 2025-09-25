@@ -124,6 +124,35 @@ function showLoading(show) {
     loadingOverlay.style.display = show ? 'flex' : 'none';
 }
 
+// Mostrar indicador de "typing"
+function showTypingIndicator() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message bot-message typing-indicator';
+    typingDiv.id = 'typing-indicator';
+    
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.textContent = '👩‍⚕️';
+    
+    const content = document.createElement('div');
+    content.className = 'message-content';
+    content.innerHTML = '<p>Jessica está escribiendo...</p>';
+    
+    typingDiv.appendChild(avatar);
+    typingDiv.appendChild(content);
+    
+    chatMessages.appendChild(typingDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Ocultar indicador de "typing"
+function hideTypingIndicator() {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
 // Mostrar error
 function showError(message) {
     loginError.textContent = message;
@@ -236,31 +265,51 @@ function updateListeningUI(listening) {
 
 // Simular respuesta de Jessica (sin API externa)
 function simulateJessicaResponse(userMessage) {
-    showLoading(true);
+    // Mostrar indicador de "typing" más rápido
+    showTypingIndicator();
     
-    // Simular delay de API
+    // Simular delay de API (reducido para mejor experiencia)
     setTimeout(() => {
-        const responses = [
-            "Hola! Me alegra escucharte. Como persona con diabetes tipo 1, entiendo los desafíos diarios. ¿Cómo te sientes hoy?",
-            "Sí, el manejo de la diabetes puede ser abrumador a veces. Yo uso una bomba de insulina y CGM, pero no siempre es fácil.",
-            "Los costos de los dispositivos son realmente altos. He tenido que luchar con el seguro muchas veces para conseguir cobertura.",
-            "La fatiga de alarmas es real. A veces desearía que los dispositivos fueran más discretos y menos intrusivos.",
-            "Es importante tener una comunidad de apoyo. Encuentro mucha ayuda en Reddit y grupos de diabetes en redes sociales.",
-            "Cada día es diferente. Algunos días mi azúcar está perfecto, otros días es un desastre. Es parte de la vida con diabetes.",
-            "Me gusta cocinar recetas bajas en carbohidratos. Pinterest tiene excelentes ideas para comidas deliciosas y saludables.",
-            "El ejercicio es clave, pero a veces es complicado balancear la actividad física con el manejo del azúcar en sangre."
-        ];
+        const message = userMessage.toLowerCase();
+        let response = "";
         
-        const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+        // Respuestas contextuales más inteligentes
+        if (message.includes('hola') || message.includes('hi') || message.includes('hello')) {
+            response = "¡Hola! Me alegra escucharte. Soy Jessica, tengo 32 años y vivo con diabetes tipo 1. ¿Cómo estás hoy?";
+        } else if (message.includes('diabetes') || message.includes('azúcar') || message.includes('glucosa')) {
+            response = "Sí, el manejo de la diabetes puede ser un desafío diario. Uso una bomba de insulina y CGM, pero no siempre es fácil mantener todo bajo control.";
+        } else if (message.includes('costo') || message.includes('dinero') || message.includes('caro') || message.includes('seguro')) {
+            response = "Los costos de los dispositivos son realmente altos. He tenido que luchar con el seguro muchas veces para conseguir cobertura adecuada.";
+        } else if (message.includes('alarma') || message.includes('ruido') || message.includes('molesto')) {
+            response = "La fatiga de alarmas es real. A veces desearía que los dispositivos fueran más discretos y menos intrusivos en mi vida diaria.";
+        } else if (message.includes('comunidad') || message.includes('ayuda') || message.includes('apoyo')) {
+            response = "Es importante tener una comunidad de apoyo. Encuentro mucha ayuda en Reddit y grupos de diabetes en redes sociales.";
+        } else if (message.includes('comida') || message.includes('receta') || message.includes('cocinar')) {
+            response = "Me gusta cocinar recetas bajas en carbohidratos. Pinterest tiene excelentes ideas para comidas deliciosas y saludables.";
+        } else if (message.includes('ejercicio') || message.includes('deporte') || message.includes('actividad')) {
+            response = "El ejercicio es clave, pero a veces es complicado balancear la actividad física con el manejo del azúcar en sangre.";
+        } else if (message.includes('día') || message.includes('dificil') || message.includes('malo')) {
+            response = "Cada día es diferente. Algunos días mi azúcar está perfecto, otros días es un desastre. Es parte de la vida con diabetes.";
+        } else {
+            // Respuestas generales si no hay contexto específico
+            const generalResponses = [
+                "Entiendo perfectamente lo que sientes. Vivir con diabetes tipo 1 tiene sus desafíos únicos.",
+                "Es importante recordar que no estás solo en esto. Hay una gran comunidad de personas que entienden tu experiencia.",
+                "A veces me siento abrumada también, pero he aprendido a tomar las cosas un día a la vez.",
+                "La tecnología ha mejorado mucho, pero aún hay días en que todo parece fallar al mismo tiempo.",
+                "Me gusta compartir mi experiencia porque creo que puede ayudar a otros que están pasando por lo mismo."
+            ];
+            response = generalResponses[Math.floor(Math.random() * generalResponses.length)];
+        }
         
         // Agregar respuesta del bot
-        addMessage(randomResponse, 'bot');
+        addMessage(response, 'bot');
         
         // Hablar la respuesta
-        speakText(randomResponse);
+        speakText(response);
         
-        showLoading(false);
-    }, 1500);
+        hideTypingIndicator();
+    }, 800);
 }
 
 // Agregar mensaje al chat
@@ -298,7 +347,7 @@ function speakText(text) {
     
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
-    utterance.rate = 0.9;
+    utterance.rate = 1.1; // Más rápido
     utterance.pitch = 1.0;
     utterance.volume = 0.8;
     

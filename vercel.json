@@ -4,8 +4,5 @@
       "runtime": "@vercel/node@3.0.7"
     }
   },
-  "outputDirectory": ".",
-  "engines": {
-    "node": "18.x"
-  }
+  "outputDirectory": "."
 }

@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 // Simulamos una base de datos simple en memoria
 const users = {

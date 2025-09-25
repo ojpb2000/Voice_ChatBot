@@ -2,6 +2,7 @@
   "name": "voice-chatbot",
   "version": "1.0.0",
   "description": "Chatbot de audio con ChatGPT para simular conversación con Jessica Taylor",
+  "type": "module",
   "main": "api/index.js",
   "scripts": {
     "dev": "vercel dev",

@@ -273,31 +273,35 @@ function simulateJessicaResponse(userMessage) {
         const message = userMessage.toLowerCase();
         let response = "";
         
-        // Respuestas contextuales más inteligentes
+        // Respuestas contextuales auténticas de Jessica Taylor
         if (message.includes('hola') || message.includes('hi') || message.includes('hello')) {
-            response = "¡Hola! Me alegra escucharte. Soy Jessica, tengo 32 años y vivo con diabetes tipo 1. ¿Cómo estás hoy?";
+            response = "¡Hola! Soy Jessica, tengo 32 años y vivo en West Virginia. Fui diagnosticada con diabetes tipo 1 en la adolescencia. ¿Cómo estás manejando todo?";
         } else if (message.includes('diabetes') || message.includes('azúcar') || message.includes('glucosa')) {
-            response = "Sí, el manejo de la diabetes puede ser un desafío diario. Uso una bomba de insulina y CGM, pero no siempre es fácil mantener todo bajo control.";
+            response = "He estado usando bombas de insulina y CGMs por años, pero honestamente, no siempre estoy satisfecha con las opciones actuales. La tecnología ha mejorado, pero aún hay días complicados.";
         } else if (message.includes('costo') || message.includes('dinero') || message.includes('caro') || message.includes('seguro')) {
-            response = "Los costos de los dispositivos son realmente altos. He tenido que luchar con el seguro muchas veces para conseguir cobertura adecuada.";
-        } else if (message.includes('alarma') || message.includes('ruido') || message.includes('molesto')) {
-            response = "La fatiga de alarmas es real. A veces desearía que los dispositivos fueran más discretos y menos intrusivos en mi vida diaria.";
-        } else if (message.includes('comunidad') || message.includes('ayuda') || message.includes('apoyo')) {
-            response = "Es importante tener una comunidad de apoyo. Encuentro mucha ayuda en Reddit y grupos de diabetes en redes sociales.";
-        } else if (message.includes('comida') || message.includes('receta') || message.includes('cocinar')) {
-            response = "Me gusta cocinar recetas bajas en carbohidratos. Pinterest tiene excelentes ideas para comidas deliciosas y saludables.";
-        } else if (message.includes('ejercicio') || message.includes('deporte') || message.includes('actividad')) {
-            response = "El ejercicio es clave, pero a veces es complicado balancear la actividad física con el manejo del azúcar en sangre.";
-        } else if (message.includes('día') || message.includes('dificil') || message.includes('malo')) {
-            response = "Cada día es diferente. Algunos días mi azúcar está perfecto, otros días es un desastre. Es parte de la vida con diabetes.";
+            response = "Ugh, los costos son una pesadilla. Con un ingreso familiar de $60k-$65k, cada dispositivo es una decisión financiera importante. He tenido que luchar tanto con el seguro para conseguir cobertura...";
+        } else if (message.includes('alarma') || message.includes('ruido') || message.includes('molesto') || message.includes('fatiga')) {
+            response = "La fatiga de alarmas es real. A veces desearía que los dispositivos fueran más discretos. No quiero que la diabetes me defina, pero a veces es imposible ignorar.";
+        } else if (message.includes('comunidad') || message.includes('ayuda') || message.includes('apoyo') || message.includes('reddit')) {
+            response = "Encuentro mucha ayuda en Reddit y grupos de diabetes en Twitter. La comunidad T1D es increíble - compartimos hacks, nos apoyamos en los días malos, y a veces hasta nos reímos juntos de las situaciones absurdas.";
+        } else if (message.includes('comida') || message.includes('receta') || message.includes('cocinar') || message.includes('pinterest')) {
+            response = "Me encanta Pinterest para recetas bajas en carbohidratos. Vivo con mi pareja y a veces cocinamos juntos. Es importante encontrar el balance entre disfrutar la comida y mantener el control.";
+        } else if (message.includes('ejercicio') || message.includes('deporte') || message.includes('actividad') || message.includes('viaje')) {
+            response = "Quiero vivir una vida activa sin que la diabetes me limite. Hago ejercicio, viajo, pero siempre tengo que planificar todo. Es agotador mentalmente a veces.";
+        } else if (message.includes('día') || message.includes('dificil') || message.includes('malo') || message.includes('estres')) {
+            response = "Algunos días mi azúcar está perfecto, otros días es un desastre total. He aprendido a no ser tan dura conmigo misma. La diabetes no me define, pero definitivamente influye en mi vida diaria.";
+        } else if (message.includes('tecnologia') || message.includes('dispositivo') || message.includes('bomba') || message.includes('cgm')) {
+            response = "Sigo las últimas tecnologías en Reddit y Twitter. Hay mucha emoción (y escepticismo) sobre nuevos dispositivos. Lo que más busco es confiabilidad, discreción y que sea fácil de usar.";
+        } else if (message.includes('trabajo') || message.includes('carrera') || message.includes('profesional')) {
+            response = "Soy graduada universitaria y trabajo en un suburbio. A veces es complicado manejar la diabetes en el trabajo, especialmente cuando las alarmas suenan en reuniones importantes.";
         } else {
-            // Respuestas generales si no hay contexto específico
+            // Respuestas generales auténticas de Jessica
             const generalResponses = [
-                "Entiendo perfectamente lo que sientes. Vivir con diabetes tipo 1 tiene sus desafíos únicos.",
-                "Es importante recordar que no estás solo en esto. Hay una gran comunidad de personas que entienden tu experiencia.",
-                "A veces me siento abrumada también, pero he aprendido a tomar las cosas un día a la vez.",
-                "La tecnología ha mejorado mucho, pero aún hay días en que todo parece fallar al mismo tiempo.",
-                "Me gusta compartir mi experiencia porque creo que puede ayudar a otros que están pasando por lo mismo."
+                "Como persona con diabetes tipo 1, entiendo los desafíos únicos. A veces me siento abrumada por el monitoreo constante, pero he aprendido a ser proactiva.",
+                "Valoro mi independencia, pero también aprecio el apoyo de la comunidad. En Reddit y Twitter encuentro personas que realmente entienden lo que es vivir con esto.",
+                "Busco el balance entre manejar mi salud y disfrutar la vida. No quiero que la diabetes me defina, pero reconozco que es parte de quién soy.",
+                "La tecnología ha mejorado mucho, pero aún hay días en que todo parece fallar. Es importante tener un plan B y no ser tan dura conmigo misma.",
+                "He aprendido a ser honesta sobre los desafíos sin dramatizar. La comunidad T1D valora la autenticidad - queremos que las marcas realmente nos entiendan."
             ];
             response = generalResponses[Math.floor(Math.random() * generalResponses.length)];
         }
@@ -347,9 +351,19 @@ function speakText(text) {
     
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
-    utterance.rate = 1.1; // Más rápido
-    utterance.pitch = 1.0;
+    utterance.rate = 1.0; // Velocidad natural para mujer de 32 años
+    utterance.pitch = 1.1; // Ligeramente más alto para sonar femenino
     utterance.volume = 0.8;
+    
+    // Intentar usar una voz femenina si está disponible
+    const voices = synthesis.getVoices();
+    const femaleVoice = voices.find(voice => 
+        voice.lang.startsWith('es') && 
+        (voice.name.includes('Female') || voice.name.includes('Mujer') || voice.name.includes('Zira'))
+    );
+    if (femaleVoice) {
+        utterance.voice = femaleVoice;
+    }
     
     utterance.onstart = () => {
         isSpeaking = true;

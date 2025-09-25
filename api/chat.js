@@ -1,4 +1,4 @@
-import axios from 'axios';
+const axios = require('axios');
 
 // Prompt del personaje Jessica Taylor
 const JESSICA_PROMPT = `Eres Jessica Taylor, una mujer de 32 años con diabetes tipo 1. Tu personalidad y características son:

@@ -274,10 +274,14 @@
                     <h4>Connection Status:</h4>
                     <div id="debugConnection">Disconnected</div>
                 </div>
-                <div class="debug-section">
-                    <h4>Session Status:</h4>
-                    <div id="debugSession">Not configured</div>
-                </div>
+                    <div class="debug-section">
+                        <h4>Session Status:</h4>
+                        <div id="debugSession">Not configured</div>
+                    </div>
+                    <div class="debug-section">
+                        <h4>OpenAI Model:</h4>
+                        <div id="debugModel">Unknown</div>
+                    </div>
                 <div class="debug-section">
                     <h4>Audio Status:</h4>
                     <div id="debugAudio">Not initialized</div>
@@ -346,6 +350,7 @@
         // Debug elements
         const debugConnection = document.getElementById('debugConnection');
         const debugSession = document.getElementById('debugSession');
+        const debugModel = document.getElementById('debugModel');
         const debugAudio = document.getElementById('debugAudio');
         const debugEvents = document.getElementById('debugEvents');
         const debugBuffer = document.getElementById('debugBuffer');
@@ -397,6 +402,16 @@
                     addDebugEvent(`Session fetch failed: ${response.status} ${errorText}`, 'error');
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
+                
+                // Update model info if available
+                if (sessionData.model) {
+                    currentModel = sessionData.model;
+                    addDebugEvent(`Using model: ${currentModel}`, 'info');
+                } else {
+                    currentModel = 'Default (no model specified)';
+                    addDebugEvent('Using default model (none specified)', 'info');
+                }
+                updateDebugInfo();
                 
                 // Connect to our WebSocket proxy (same port as HTTP)
                 const wsUrl = `wss://voice-chatbot-a9u5.onrender.com`;
@@ -686,6 +701,7 @@
         
         let sessionReady = false;
         let sessionConfigured = false;
+        let currentModel = null;
         
         function sendAudioToOpenAI(base64Audio) {
             // Buffer audio if session is not ready
@@ -821,6 +837,8 @@
             debugSession.textContent = sessionReady ? 
                 `Ready: ${sessionConfigured ? 'Configured' : 'Not configured'}` : 
                 'Not ready';
+            
+            debugModel.textContent = currentModel || 'Unknown';
             
             debugAudio.textContent = audioContext ? 
                 `Context: ${audioContext.state}, Microphone: ${mediaRecorder ? 'Active' : 'Inactive'}` : 

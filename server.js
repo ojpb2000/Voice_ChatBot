@@ -267,7 +267,8 @@ app.post('/api/realtime/session', async (req, res) => {
     console.log('Realtime session created successfully:', data.id);
     res.json({ 
       client_secret: data.client_secret,
-      session_id: data.id 
+      session_id: data.id,
+      model: process.env.OPENAI_MODEL || 'default'
     });
   } catch (err) {
     console.error('Realtime session error:', err);

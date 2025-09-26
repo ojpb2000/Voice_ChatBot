@@ -261,8 +261,30 @@
                 };
                 
                 websocket.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    console.log('Received:', data);
+                    // Handle both JSON messages and binary data
+                    let data;
+                    try {
+                        data = JSON.parse(event.data);
+                        console.log('Received JSON:', data);
+                    } catch (e) {
+                        // Handle binary data (audio)
+                        console.log('Received binary data (audio)');
+                        if (event.data instanceof Blob) {
+                            // This is audio data from OpenAI
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                const audioData = reader.result;
+                                // Convert to base64 and play
+                                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
+                                audioQueue.push(base64Audio);
+                                if (!audioPlaying) {
+                                    playNextAudio();
+                                }
+                            };
+                            reader.readAsArrayBuffer(event.data);
+                        }
+                        return;
+                    }
                     
                     switch (data.type) {
                         case 'connected':
@@ -499,22 +521,41 @@
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
-                const audioBlob = new Blob([bytes], { type: 'audio/pcm' });
+                
+                // Try different audio formats
+                const audioBlob = new Blob([bytes], { type: 'audio/wav' });
                 
                 // Create audio element and play
                 const audioUrl = URL.createObjectURL(audioBlob);
                 const audio = new Audio(audioUrl);
-                audio.play().catch(error => {
-                    console.error('Failed to play audio:', error);
-                });
                 
-                // Clean up URL after playing
+                audio.oncanplaythrough = () => {
+                    audio.play().catch(error => {
+                        console.error('Failed to play audio:', error);
+                        audioPlaying = false;
+                        playNextAudio();
+                    });
+                };
+                
                 audio.onended = () => {
                     URL.revokeObjectURL(audioUrl);
+                    audioPlaying = false;
+                    playNextAudio(); // Play next audio in queue
                 };
+                
+                audio.onerror = (error) => {
+                    console.error('Audio error:', error);
+                    URL.revokeObjectURL(audioUrl);
+                    audioPlaying = false;
+                    playNextAudio();
+                };
+                
+                audioPlaying = true;
                 
             } catch (error) {
                 console.error('Failed to play audio from base64:', error);
+                audioPlaying = false;
+                playNextAudio();
             }
         }
     </script>

@@ -38,6 +38,55 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'voice-chatbot-backend', time: new Date().toISOString() });
 });
 
+// Whisper transcription endpoint
+app.post('/api/transcribe', async (req, res) => {
+  try {
+    const { audio, model = 'whisper-1' } = req.body;
+    
+    if (!audio) {
+      return res.status(400).json({ error: 'Audio data is required' });
+    }
+    
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
+    }
+    
+    // Convert base64 to buffer
+    const audioBuffer = Buffer.from(audio, 'base64');
+    
+    // Create form data for Whisper API
+    const formData = new FormData();
+    formData.append('file', new Blob([audioBuffer], { type: 'audio/webm' }), 'audio.webm');
+    formData.append('model', model);
+    formData.append('language', 'en');
+    formData.append('response_format', 'json');
+    
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Whisper API error:', response.status, error);
+      return res.status(response.status).json({ error: 'Transcription failed' });
+    }
+    
+    const result = await response.json();
+    console.log('Transcription result:', result.text);
+    
+    res.json({ text: result.text });
+    
+  } catch (error) {
+    console.error('Transcription error:', error);
+    res.status(500).json({ error: 'Transcription failed' });
+  }
+});
+
 // Authentication endpoint
 app.post('/api/auth', (req, res) => {
   const { username, password } = req.body;

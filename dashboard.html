@@ -209,18 +209,34 @@
 
             <div class="option-card" onclick="goToRealtimeChat()">
                 <div class="option-icon">🎙️</div>
-                <h3 class="option-title">Realtime Voice Chat</h3>
+                <h3 class="option-title">Realtime Voice Chat (WebSocket)</h3>
                 <p class="option-description">
-                    Experience natural, real-time voice conversation with Jessica. Speak naturally and 
-                    get instant voice responses - just like talking to a real person.
+                    Experience natural, real-time voice conversation with Jessica using OpenAI's Realtime API. 
+                    Full-duplex conversation with WebSocket connection.
                 </p>
                 <ul class="features-list">
                     <li>Real-time voice conversation</li>
-                    <li>Natural speech recognition</li>
-                    <li>Instant voice responses</li>
-                    <li>Barge-in support</li>
+                    <li>WebSocket connection</li>
+                    <li>Full-duplex audio</li>
+                    <li>Advanced debugging</li>
                 </ul>
-                <button class="option-btn">Start Voice Chat</button>
+                <button class="option-btn">Start WebSocket Chat</button>
+            </div>
+
+            <div class="option-card" onclick="goToWebRTCChat()">
+                <div class="option-icon">⚡</div>
+                <h3 class="option-title">Ultra-Fast Voice Chat (WebRTC)</h3>
+                <p class="option-description">
+                    Ultra-low latency voice conversation using WebRTC + Whisper. Process audio in 200ms chunks 
+                    for the fastest possible response time.
+                </p>
+                <ul class="features-list">
+                    <li>Ultra-low latency (&lt;500ms)</li>
+                    <li>WebRTC audio capture</li>
+                    <li>Whisper transcription</li>
+                    <li>Real-time processing</li>
+                </ul>
+                <button class="option-btn">Start Ultra-Fast Chat</button>
             </div>
         </div>
     </div>
@@ -246,6 +262,10 @@
 
         function goToRealtimeChat() {
             window.location.href = 'realtime.html';
+        }
+
+        function goToWebRTCChat() {
+            window.location.href = 'realtime-webrtc.html';
         }
     </script>
 </body>

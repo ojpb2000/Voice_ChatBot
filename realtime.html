@@ -374,23 +374,35 @@
                             break;
                         case 'session.updated':
                             console.log('Session updated:', data.session);
-                            sessionReady = true;
-                            updateStatus('connected', 'Connected - Ready to talk!');
-                            updateCentralButton('connected', '🎙️');
+                            sessionConfigured = true;
                             
-                            // Initialize audio context with user interaction
-                            if (!audioContext) {
-                                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                            }
-                            
-                            // Resume audio context if suspended
-                            if (audioContext.state === 'suspended') {
-                                audioContext.resume().then(() => {
-                                    console.log('Audio context resumed');
-                                });
-                            }
-                            
-                            setupMicrophone();
+                            // Wait a bit more before marking as ready
+                            setTimeout(() => {
+                                sessionReady = true;
+                                updateStatus('connected', 'Connected - Ready to talk!');
+                                updateCentralButton('connected', '🎙️');
+                                
+                                // Initialize audio context with user interaction
+                                if (!audioContext) {
+                                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                }
+                                
+                                // Resume audio context if suspended
+                                if (audioContext.state === 'suspended') {
+                                    audioContext.resume().then(() => {
+                                        console.log('Audio context resumed');
+                                    });
+                                }
+                                
+                                setupMicrophone();
+                                
+                                // Process buffered audio
+                                if (audioBuffer.length > 0) {
+                                    console.log('Processing buffered audio:', audioBuffer.length, 'chunks');
+                                    // Clear buffer - we'll start fresh
+                                    audioBuffer = [];
+                                }
+                            }, 2000); // Wait 2 seconds after session update
                             break;
                         case 'conversation.item.input_audio_buffer.committed':
                             console.log('Input audio committed');
@@ -441,6 +453,8 @@
                     updateCentralButton('disconnected', '🎤');
                     isConnected = false;
                     sessionReady = false;
+                    sessionConfigured = false;
+                    audioBuffer = [];
                     cleanupAudioVisualizer();
                     cleanupMicrophone();
                 };
@@ -469,6 +483,9 @@
             isConnected = false;
             audioQueue = [];
             audioPlaying = false;
+            sessionReady = false;
+            sessionConfigured = false;
+            audioBuffer = [];
             
             cleanupAudioVisualizer();
             cleanupMicrophone();
@@ -550,9 +567,18 @@
         }
         
         let sessionReady = false;
+        let sessionConfigured = false;
+        let audioBuffer = [];
         
         function sendAudioToOpenAI(base64Audio) {
-            if (websocket && websocket.readyState === WebSocket.OPEN && !isSendingAudio && sessionReady) {
+            // Buffer audio if session is not ready
+            if (!sessionReady || !sessionConfigured) {
+                audioBuffer.push(base64Audio);
+                console.log('Audio buffered, waiting for session to be ready. Buffer size:', audioBuffer.length);
+                return;
+            }
+            
+            if (websocket && websocket.readyState === WebSocket.OPEN && !isSendingAudio) {
                 isSendingAudio = true;
                 
                 try {

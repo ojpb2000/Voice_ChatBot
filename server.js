@@ -238,8 +238,6 @@ app.post('/api/realtime/session', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-        voice: 'alloy',
         model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
       })
     });
@@ -310,9 +308,8 @@ wss.on('connection', (clientWs) => {
           return;
         }
         
+        // Try with minimal configuration first
         const sessionConfig = {
-          instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-          voice: 'alloy',
           model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
         };
         
@@ -347,7 +344,11 @@ wss.on('connection', (clientWs) => {
         console.log('OpenAI session created successfully:', sessionData.id);
         
         // Connect to OpenAI Realtime
-        openaiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01&client_secret=${sessionData.client_secret}`);
+        const modelParam = process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview';
+        const wsUrl = `wss://api.openai.com/v1/realtime?model=${modelParam}&client_secret=${sessionData.client_secret}`;
+        console.log('Connecting to OpenAI WebSocket:', wsUrl);
+        
+        openaiWs = new WebSocket(wsUrl);
         
         openaiWs.on('open', () => {
           clientWs.send(JSON.stringify({ type: 'connected' }));
@@ -370,6 +371,8 @@ wss.on('connection', (clientWs) => {
         
         openaiWs.on('error', (error) => {
           console.error('OpenAI WebSocket error:', error);
+          console.error('WebSocket URL:', wsUrl);
+          console.error('Session data:', sessionData);
           if (clientWs.readyState === WebSocket.OPEN) {
             clientWs.send(JSON.stringify({ type: 'error', error: error.message }));
           }

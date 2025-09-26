@@ -354,16 +354,8 @@ wss.on('connection', (clientWs) => {
           console.log('OpenAI WebSocket connected successfully');
           clientWs.send(JSON.stringify({ type: 'connected' }));
           
-          // Configure the session after connection
-          setTimeout(() => {
-            openaiWs.send(JSON.stringify({
-              type: 'session.update',
-              session: {
-                instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-                voice: 'alloy'
-              }
-            }));
-          }, 1000);
+          // Don't send any configuration immediately - let the client handle it
+          console.log('OpenAI WebSocket ready, waiting for client configuration');
         });
         
         openaiWs.on('message', (data) => {

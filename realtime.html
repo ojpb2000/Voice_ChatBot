@@ -307,11 +307,30 @@
                     switch (data.type) {
                         case 'connected':
                             console.log('Connected to OpenAI Realtime via proxy');
+                            updateStatus('connected', 'Configuring session...');
+                            
+                            // Configure the session first
+                            websocket.send(JSON.stringify({
+                                type: 'session.update',
+                                session: {
+                                    instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
+                                    voice: 'alloy'
+                                }
+                            }));
+                            console.log('Sent session configuration');
+                            break;
+                        case 'session.created':
+                            console.log('Session created:', data.session);
+                            sessionReady = true;
+                            updateStatus('connected', 'Connected - Ready to talk!');
+                            break;
+                        case 'session.updated':
+                            console.log('Session updated:', data.session);
+                            sessionReady = true;
                             updateStatus('connected', 'Connected - Ready to talk!');
                             connectBtn.disabled = false;
                             disconnectBtn.disabled = false;
                             muteBtn.disabled = false;
-                            isConnected = true;
                             
                             // Initialize audio context with user interaction
                             if (!audioContext) {
@@ -326,15 +345,6 @@
                             }
                             
                             setupMicrophone();
-                            break;
-                        case 'session.created':
-                            console.log('Session created:', data.session);
-                            sessionReady = true;
-                            updateStatus('connected', 'Connected - Ready to talk!');
-                            break;
-                        case 'session.updated':
-                            console.log('Session updated:', data.session);
-                            sessionReady = true;
                             break;
                         case 'conversation.item.input_audio_buffer.committed':
                             console.log('Input audio committed');

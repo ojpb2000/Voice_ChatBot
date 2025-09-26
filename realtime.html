@@ -541,81 +541,131 @@
         
         function playAudioFromBase64(base64Audio) {
             try {
-                // Convert base64 to audio blob
+                // Convert base64 to audio data
                 const binaryString = atob(base64Audio);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
                     bytes[i] = binaryString.charCodeAt(i);
                 }
                 
-                // Try different audio formats - OpenAI Realtime uses PCM
-                const audioBlob = new Blob([bytes], { type: 'audio/pcm' });
-                
-                // Create audio element and play
-                const audioUrl = URL.createObjectURL(audioBlob);
-                const audio = new Audio(audioUrl);
-                
-                audio.oncanplaythrough = () => {
-                    audio.play().catch(error => {
-                        console.error('Failed to play audio:', error);
-                        audioPlaying = false;
-                        playNextAudio();
-                    });
-                };
-                
-                audio.onended = () => {
-                    URL.revokeObjectURL(audioUrl);
-                    audioPlaying = false;
-                    playNextAudio(); // Play next audio in queue
-                };
-                
-                audio.onerror = (error) => {
-                    console.warn('Audio playback failed, trying alternative format:', error);
-                    URL.revokeObjectURL(audioUrl);
-                    audioPlaying = false;
-                    
-                    // Try with different audio format
-                    try {
-                        const audioBlob2 = new Blob([bytes], { type: 'audio/wav' });
-                        const audioUrl2 = URL.createObjectURL(audioBlob2);
-                        const audio2 = new Audio(audioUrl2);
-                        
-                        audio2.oncanplaythrough = () => {
-                            audio2.play().catch(() => {
-                                console.warn('Alternative audio format also failed');
-                                audioPlaying = false;
-                                playNextAudio();
-                            });
-                        };
-                        
-                        audio2.onended = () => {
-                            URL.revokeObjectURL(audioUrl2);
-                            audioPlaying = false;
-                            playNextAudio();
-                        };
-                        
-                        audio2.onerror = () => {
-                            console.warn('All audio formats failed');
-                            URL.revokeObjectURL(audioUrl2);
-                            audioPlaying = false;
-                            playNextAudio();
-                        };
-                        
-                        audioPlaying = true;
-                    } catch (e) {
-                        console.warn('Failed to create alternative audio:', e);
-                        audioPlaying = false;
-                        playNextAudio();
-                    }
-                };
-                
-                audioPlaying = true;
+                // Use Web Audio API to play PCM data
+                playPCMAudio(bytes);
                 
             } catch (error) {
-                console.error('Failed to play audio from base64:', error);
+                console.error('Failed to process audio from base64:', error);
                 audioPlaying = false;
                 playNextAudio();
             }
+        }
+
+        function playPCMAudio(pcmData) {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Convert PCM data to Float32Array
+                const samples = new Float32Array(pcmData.length / 2);
+                for (let i = 0; i < samples.length; i++) {
+                    // Convert 16-bit PCM to float (-1.0 to 1.0)
+                    const sample = (pcmData[i * 2] | (pcmData[i * 2 + 1] << 8));
+                    samples[i] = sample < 32768 ? sample / 32768 : (sample - 65536) / 32768;
+                }
+                
+                // Create audio buffer
+                const audioBuffer = audioContext.createBuffer(1, samples.length, 24000); // 24kHz sample rate
+                audioBuffer.copyToChannel(samples, 0);
+                
+                // Create and play audio source
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContext.destination);
+                
+                source.onended = () => {
+                    audioPlaying = false;
+                    playNextAudio();
+                };
+                
+                source.start();
+                audioPlaying = true;
+                console.log('Playing PCM audio via Web Audio API');
+                
+            } catch (error) {
+                console.warn('Web Audio API failed, trying fallback:', error);
+                
+                // Fallback: try to create a simple WAV file
+                try {
+                    const wavData = createWAVFile(pcmData);
+                    const audioBlob = new Blob([wavData], { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    
+                    audio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        audioPlaying = false;
+                        playNextAudio();
+                    };
+                    
+                    audio.onerror = () => {
+                        console.warn('Fallback audio also failed');
+                        URL.revokeObjectURL(audioUrl);
+                        audioPlaying = false;
+                        playNextAudio();
+                    };
+                    
+                    audio.play().catch(() => {
+                        console.warn('Audio play failed');
+                        audioPlaying = false;
+                        playNextAudio();
+                    });
+                    
+                    audioPlaying = true;
+                } catch (e) {
+                    console.warn('All audio methods failed:', e);
+                    audioPlaying = false;
+                    playNextAudio();
+                }
+            }
+        }
+
+        function createWAVFile(pcmData) {
+            const sampleRate = 24000;
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const blockAlign = numChannels * bitsPerSample / 8;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmData.length;
+            const fileSize = 44 + dataSize;
+            
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+            
+            // WAV header
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+            
+            writeString(0, 'RIFF');
+            view.setUint32(4, fileSize - 8, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(36, 'data');
+            view.setUint32(40, dataSize, true);
+            
+            // Copy PCM data
+            const uint8View = new Uint8Array(buffer, 44);
+            uint8View.set(pcmData);
+            
+            return buffer;
         }
 
         function playNextAudio() {

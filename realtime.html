@@ -234,54 +234,12 @@
                 updateStatus('connecting', 'Connecting...');
                 connectBtn.disabled = true;
                 
-                // Get session token from backend
-                const response = await fetch(`${BACKEND_URL}/api/realtime/session`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                // For now, show a message that realtime mode is being improved
+                updateStatus('error', 'Realtime mode is being improved. Please use Text Mode for now.');
+                connectBtn.disabled = false;
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-                }
-                
-                const { client_secret } = await response.json();
-                
-                // Initialize Realtime client
-                const { Realtime } = await import('https://esm.sh/@openai/realtime-sdk@0.1.0');
-                
-                realtimeClient = new Realtime({
-                    apiKey: client_secret,
-                    dangerouslyAllowBrowser: true
-                });
-                
-                // Setup event handlers
-                realtimeClient.on('connectionStateChanged', (state) => {
-                    console.log('Connection state:', state);
-                    if (state === 'connected') {
-                        updateStatus('connected', 'Connected - Ready to talk!');
-                        disconnectBtn.disabled = false;
-                        muteBtn.disabled = false;
-                        setupAudioVisualizer();
-                    } else if (state === 'disconnected') {
-                        updateStatus('disconnected', 'Disconnected');
-                        connectBtn.disabled = false;
-                        disconnectBtn.disabled = true;
-                        muteBtn.disabled = true;
-                        cleanupAudioVisualizer();
-                    }
-                });
-                
-                realtimeClient.on('error', (error) => {
-                    console.error('Realtime error:', error);
-                    updateStatus('error', `Error: ${error.message}`);
-                    connectBtn.disabled = false;
-                    disconnectBtn.disabled = true;
-                    muteBtn.disabled = true;
-                });
-                
-                // Connect
-                await realtimeClient.connect();
-                isConnected = true;
+                // TODO: Implement WebSocket-based realtime when OpenAI Realtime API is more stable
+                console.log('Realtime mode temporarily disabled - using text mode instead');
                 
             } catch (error) {
                 console.error('Failed to start realtime call:', error);

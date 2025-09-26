@@ -201,12 +201,15 @@
         const BACKEND_URL = 'https://voice-chatbot-a9u5.onrender.com';
         
         // State
-        let realtimeClient = null;
+        let websocket = null;
         let isConnected = false;
         let isMuted = false;
         let audioContext = null;
         let analyser = null;
         let microphone = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let sessionId = null;
         
         // DOM elements
         const statusIndicator = document.getElementById('statusIndicator');
@@ -234,12 +237,110 @@
                 updateStatus('connecting', 'Connecting...');
                 connectBtn.disabled = true;
                 
-                // For now, show a message that realtime mode is being improved
-                updateStatus('error', 'Realtime mode is being improved. Please use Text Mode for now.');
-                connectBtn.disabled = false;
+                // Get session token from backend
+                const response = await fetch(`${BACKEND_URL}/api/realtime/session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 
-                // TODO: Implement WebSocket-based realtime when OpenAI Realtime API is more stable
-                console.log('Realtime mode temporarily disabled - using text mode instead');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                const { client_secret, session_id } = await response.json();
+                sessionId = session_id;
+                
+                // Connect to OpenAI Realtime WebSocket
+                const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01&client_secret=${client_secret}`;
+                websocket = new WebSocket(wsUrl);
+                
+                websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    updateStatus('connected', 'Connected - Ready to talk!');
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = false;
+                    muteBtn.disabled = false;
+                    isConnected = true;
+                    setupAudioVisualizer();
+                    setupMicrophone();
+                    
+                    // Send session configuration
+                    websocket.send(JSON.stringify({
+                        type: 'session.update',
+                        session: {
+                            instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English (en-US). Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
+                            voice: 'alloy',
+                            input_audio_format: 'pcm16',
+                            output_audio_format: 'pcm16',
+                            input_audio_transcription: {
+                                model: 'whisper-1'
+                            },
+                            turn_detection: {
+                                type: 'server_vad',
+                                threshold: 0.5,
+                                prefix_padding_ms: 300,
+                                silence_duration_ms: 200
+                            },
+                            tools: [],
+                            tool_choice: 'auto',
+                            temperature: 0.7,
+                            max_response_output_tokens: 300
+                        }
+                    }));
+                };
+                
+                websocket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('Received:', data);
+                    
+                    switch (data.type) {
+                        case 'session.created':
+                            console.log('Session created:', data.session);
+                            break;
+                        case 'session.updated':
+                            console.log('Session updated:', data.session);
+                            break;
+                        case 'conversation.item.input_audio_buffer.committed':
+                            console.log('Input audio committed');
+                            break;
+                        case 'conversation.item.output_audio_buffer.committed':
+                            console.log('Output audio committed');
+                            if (data.audio) {
+                                playAudioFromBase64(data.audio);
+                            }
+                            break;
+                        case 'conversation.item.output_audio_buffer.speech_started':
+                            console.log('Jessica started speaking');
+                            break;
+                        case 'conversation.item.output_audio_buffer.speech_stopped':
+                            console.log('Jessica stopped speaking');
+                            break;
+                        case 'conversation.item.transcript.completed':
+                            console.log('Transcript:', data.transcript);
+                            break;
+                        case 'error':
+                            console.error('WebSocket error:', data.error);
+                            updateStatus('error', `Error: ${data.error.message}`);
+                            break;
+                    }
+                };
+                
+                websocket.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    updateStatus('disconnected', 'Disconnected');
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    muteBtn.disabled = true;
+                    isConnected = false;
+                    cleanupAudioVisualizer();
+                    cleanupMicrophone();
+                };
+                
+                websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateStatus('error', 'Connection error');
+                    connectBtn.disabled = false;
+                };
                 
             } catch (error) {
                 console.error('Failed to start realtime call:', error);
@@ -249,27 +350,106 @@
         }
         
         async function endRealtimeCall() {
-            if (realtimeClient) {
-                await realtimeClient.disconnect();
-                realtimeClient = null;
+            if (websocket) {
+                websocket.close();
+                websocket = null;
             }
             isConnected = false;
             cleanupAudioVisualizer();
+            cleanupMicrophone();
         }
         
         function toggleMute() {
-            if (!realtimeClient) return;
+            if (!websocket) return;
             
             isMuted = !isMuted;
             
             if (isMuted) {
-                realtimeClient.audio.microphone.disable();
+                stopMicrophone();
                 muteBtn.innerHTML = '🔊 Unmute';
                 muteBtn.className = 'control-btn btn-unmute';
             } else {
-                realtimeClient.audio.microphone.enable();
+                setupMicrophone();
                 muteBtn.innerHTML = '🔇 Mute';
                 muteBtn.className = 'control-btn btn-mute';
+            }
+        }
+        
+        async function setupMicrophone() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 24000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+                
+                // Create MediaRecorder for audio capture
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+                
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    sendAudioToServer(audioBlob);
+                };
+                
+                // Start recording
+                mediaRecorder.start(100); // Record in 100ms chunks
+                
+            } catch (error) {
+                console.error('Microphone setup failed:', error);
+                updateStatus('error', 'Microphone access denied');
+            }
+        }
+        
+        function stopMicrophone() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+        }
+        
+        function cleanupMicrophone() {
+            if (mediaRecorder) {
+                if (mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+                mediaRecorder = null;
+            }
+            audioChunks = [];
+        }
+        
+        async function sendAudioToServer(audioBlob) {
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
+            
+            try {
+                // Convert audio to base64
+                const arrayBuffer = await audioBlob.arrayBuffer();
+                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+                
+                // Send audio to WebSocket
+                websocket.send(JSON.stringify({
+                    type: 'conversation.item.input_audio_buffer.append',
+                    audio: base64Audio
+                }));
+                
+                // Commit the audio buffer
+                websocket.send(JSON.stringify({
+                    type: 'conversation.item.input_audio_buffer.commit'
+                }));
+                
+            } catch (error) {
+                console.error('Failed to send audio:', error);
             }
         }
         
@@ -328,6 +508,33 @@
             }
             
             draw();
+        }
+        
+        function playAudioFromBase64(base64Audio) {
+            try {
+                // Convert base64 to audio blob
+                const binaryString = atob(base64Audio);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const audioBlob = new Blob([bytes], { type: 'audio/pcm' });
+                
+                // Create audio element and play
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play().catch(error => {
+                    console.error('Failed to play audio:', error);
+                });
+                
+                // Clean up URL after playing
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                };
+                
+            } catch (error) {
+                console.error('Failed to play audio from base64:', error);
+            }
         }
     </script>
 </body>

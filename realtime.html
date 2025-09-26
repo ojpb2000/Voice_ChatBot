@@ -310,7 +310,10 @@
                         case 'conversation.item.output_audio_buffer.committed':
                             console.log('Output audio committed');
                             if (data.audio) {
-                                playAudioFromBase64(data.audio);
+                                audioQueue.push(data.audio);
+                                if (!audioPlaying) {
+                                    playNextAudio();
+                                }
                             }
                             break;
                         case 'conversation.item.output_audio_buffer.speech_started':
@@ -565,6 +568,13 @@
                 console.error('Failed to play audio from base64:', error);
                 audioPlaying = false;
                 playNextAudio();
+            }
+        }
+
+        function playNextAudio() {
+            if (audioQueue.length > 0 && !audioPlaying) {
+                const nextAudio = audioQueue.shift();
+                playAudioFromBase64(nextAudio);
             }
         }
     </script>

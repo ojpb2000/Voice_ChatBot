@@ -200,7 +200,14 @@ app.post('/api/realtime/session', async (req, res) => {
       },
       body: JSON.stringify({
         instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-        voice: 'alloy'
+        voice: 'alloy',
+        model: 'gpt-4o-realtime-preview-2024-10-01',
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 500
+        }
       })
     });
 
@@ -242,7 +249,14 @@ wss.on('connection', (clientWs) => {
         
         const sessionConfig = {
           instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-          voice: 'alloy'
+          voice: 'alloy',
+          model: 'gpt-4o-realtime-preview-2024-10-01',
+          turn_detection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500
+          }
         };
         
         console.log('Session config:', JSON.stringify(sessionConfig, null, 2));

@@ -212,6 +212,8 @@
         let sessionId = null;
         let audioQueue = [];
         let audioPlaying = false;
+        let audioBuffer = [];
+        let isSendingAudio = false;
         
         // DOM elements
         const statusIndicator = document.getElementById('statusIndicator');
@@ -322,12 +324,11 @@
                         case 'conversation.item.input_audio_buffer.committed':
                             console.log('Input audio committed');
                             break;
-                        case 'conversation.item.output_audio_buffer.committed':
-                            console.log('Output audio committed, audio length:', data.audio ? data.audio.length : 'none');
-                            if (data.audio) {
-                                // data.audio is base64 encoded PCM data
+                        case 'response.output_audio.delta':
+                            console.log('Audio delta received, length:', data.delta ? data.delta.length : 'none');
+                            if (data.delta) {
                                 try {
-                                    const binaryString = atob(data.audio);
+                                    const binaryString = atob(data.delta);
                                     const pcmData = new Uint8Array(binaryString.length);
                                     for (let i = 0; i < binaryString.length; i++) {
                                         pcmData[i] = binaryString.charCodeAt(i);
@@ -341,6 +342,9 @@
                                     console.error('Failed to decode base64 audio:', e);
                                 }
                             }
+                            break;
+                        case 'response.output_audio.done':
+                            console.log('Audio response completed');
                             break;
                         case 'conversation.item.output_audio_buffer.speech_started':
                             console.log('Jessica started speaking');
@@ -435,26 +439,38 @@
                     }
                 });
                 
-                // Create MediaRecorder for audio capture
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'audio/webm;codecs=opus'
+                // Create AudioContext for PCM processing
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 24000
                 });
                 
-                audioChunks = [];
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
                 
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
+                processor.onaudioprocess = (event) => {
+                    if (!isMuted && websocket && websocket.readyState === WebSocket.OPEN) {
+                        const inputBuffer = event.inputBuffer;
+                        const inputData = inputBuffer.getChannelData(0);
+                        
+                        // Convert float32 to int16 PCM
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32768));
+                        }
+                        
+                        // Convert to base64
+                        const base64Audio = btoa(String.fromCharCode(...new Uint8Array(pcmData.buffer)));
+                        
+                        // Send audio to OpenAI
+                        sendAudioToOpenAI(base64Audio);
                     }
                 };
                 
-                mediaRecorder.onstop = () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    sendAudioToServer(audioBlob);
-                };
+                source.connect(processor);
+                processor.connect(audioContext.destination);
                 
-                // Start recording
-                mediaRecorder.start(100); // Record in 100ms chunks
+                // Store references for cleanup
+                mediaRecorder = { stream, processor, source };
                 
                 // Setup audio visualizer
                 setupAudioVisualizer();
@@ -465,19 +481,72 @@
             }
         }
         
+        function sendAudioToOpenAI(base64Audio) {
+            if (websocket && websocket.readyState === WebSocket.OPEN && !isSendingAudio) {
+                isSendingAudio = true;
+                
+                // Send audio buffer append
+                websocket.send(JSON.stringify({
+                    type: 'conversation.item.input_audio_buffer.append',
+                    item: {
+                        type: 'input_audio_buffer',
+                        input_audio_buffer: {
+                            data: base64Audio
+                        }
+                    }
+                }));
+                
+                // Send audio buffer commit
+                websocket.send(JSON.stringify({
+                    type: 'conversation.item.input_audio_buffer.commit',
+                    item: {
+                        type: 'input_audio_buffer',
+                        input_audio_buffer: {
+                            data: base64Audio
+                        }
+                    }
+                }));
+                
+                // Request response
+                websocket.send(JSON.stringify({
+                    type: 'response.create',
+                    response: {
+                        modalities: ['text', 'audio'],
+                        instructions: 'Respond as Jessica Taylor, a 32-year-old woman with Type 1 Diabetes. Keep responses conversational and concise.'
+                    }
+                }));
+                
+                setTimeout(() => {
+                    isSendingAudio = false;
+                }, 100);
+            }
+        }
+        
         function stopMicrophone() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
+            if (mediaRecorder && mediaRecorder.processor) {
+                mediaRecorder.processor.disconnect();
             }
         }
         
         function cleanupMicrophone() {
             if (mediaRecorder) {
-                if (mediaRecorder.state === 'recording') {
-                    mediaRecorder.stop();
+                if (mediaRecorder.processor) {
+                    mediaRecorder.processor.disconnect();
+                }
+                if (mediaRecorder.source) {
+                    mediaRecorder.source.disconnect();
+                }
+                if (mediaRecorder.stream) {
+                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 }
                 mediaRecorder = null;
             }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
             audioChunks = [];
         }
         

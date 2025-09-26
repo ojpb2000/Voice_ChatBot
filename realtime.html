@@ -100,6 +100,62 @@
             50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
+        
+        .debug-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .debug-panel h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .debug-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .debug-section {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        .debug-section h4 {
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .debug-section div {
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .debug-events {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 10px;
+        }
+        
+        .debug-event {
+            margin-bottom: 2px;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .debug-event.success { background: #d4edda; color: #155724; }
+        .debug-event.error { background: #f8d7da; color: #721c24; }
+        .debug-event.info { background: #d1ecf1; color: #0c5460; }
         .control-btn {
             padding: 15px 30px;
             border: none;
@@ -210,6 +266,33 @@
             </button>
         </div>
 
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debugPanel">
+            <h3>🔍 Debug Information</h3>
+            <div class="debug-content">
+                <div class="debug-section">
+                    <h4>Connection Status:</h4>
+                    <div id="debugConnection">Disconnected</div>
+                </div>
+                <div class="debug-section">
+                    <h4>Session Status:</h4>
+                    <div id="debugSession">Not configured</div>
+                </div>
+                <div class="debug-section">
+                    <h4>Audio Status:</h4>
+                    <div id="debugAudio">Not initialized</div>
+                </div>
+                <div class="debug-section">
+                    <h4>Recent Events:</h4>
+                    <div id="debugEvents" class="debug-events"></div>
+                </div>
+                <div class="debug-section">
+                    <h4>Audio Buffer:</h4>
+                    <div id="debugBuffer">0 chunks</div>
+                </div>
+            </div>
+        </div>
+
         <div class="audio-visualizer" id="audioVisualizer">
             <div class="audio-bar"></div>
             <div class="audio-bar"></div>
@@ -260,6 +343,13 @@
         const audioVisualizer = document.getElementById('audioVisualizer');
         const audioBars = audioVisualizer.querySelectorAll('.audio-bar');
         
+        // Debug elements
+        const debugConnection = document.getElementById('debugConnection');
+        const debugSession = document.getElementById('debugSession');
+        const debugAudio = document.getElementById('debugAudio');
+        const debugEvents = document.getElementById('debugEvents');
+        const debugBuffer = document.getElementById('debugBuffer');
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             // Check authentication
@@ -287,8 +377,10 @@
         async function startRealtimeCall() {
             try {
                 console.log('Starting realtime call...');
+                addDebugEvent('Starting realtime call...', 'info');
                 updateStatus('connecting', 'Connecting...');
                 updateCentralButton('connecting', '⏳');
+                updateDebugInfo();
                 
                 // Get session token from backend
                 console.log('Fetching session from:', `${BACKEND_URL}/api/realtime/session`);
@@ -298,9 +390,11 @@
                 });
                 
                 console.log('Session response status:', response.status);
+                addDebugEvent(`Session response: ${response.status}`, response.ok ? 'success' : 'error');
                 if (!response.ok) {
                     const errorText = await response.text();
                     console.error('Session fetch failed:', response.status, errorText);
+                    addDebugEvent(`Session fetch failed: ${response.status} ${errorText}`, 'error');
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
@@ -311,12 +405,15 @@
                 
                 websocket.onopen = () => {
                     console.log('WebSocket connected to proxy');
+                    addDebugEvent('WebSocket connected to proxy', 'success');
+                    updateDebugInfo();
                     
                     // Send connect message to proxy
                     websocket.send(JSON.stringify({
                         type: 'connect'
                     }));
                     console.log('Sent connect message to proxy');
+                    addDebugEvent('Sent connect message to proxy', 'info');
                 };
                 
                 websocket.onerror = (error) => {
@@ -355,7 +452,9 @@
                     switch (data.type) {
                         case 'connected':
                             console.log('Connected to OpenAI Realtime via proxy');
+                            addDebugEvent('Connected to OpenAI Realtime via proxy', 'success');
                             updateStatus('connected', 'Configuring session...');
+                            updateDebugInfo();
                             
                             // Configure the session first
                             websocket.send(JSON.stringify({
@@ -366,6 +465,7 @@
                                 }
                             }));
                             console.log('Sent session configuration');
+                            addDebugEvent('Sent session configuration', 'info');
                             break;
                         case 'session.created':
                             console.log('Session created:', data.session);
@@ -374,23 +474,29 @@
                             break;
                         case 'session.updated':
                             console.log('Session updated:', data.session);
+                            addDebugEvent('Session updated successfully', 'success');
                             sessionConfigured = true;
+                            updateDebugInfo();
                             
                             // Wait a bit more before marking as ready
                             setTimeout(() => {
                                 sessionReady = true;
                                 updateStatus('connected', 'Connected - Ready to talk!');
                                 updateCentralButton('connected', '🎙️');
+                                addDebugEvent('Session ready for audio', 'success');
                                 
                                 // Initialize audio context with user interaction
                                 if (!audioContext) {
                                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                    addDebugEvent('Audio context created', 'info');
                                 }
                                 
                                 // Resume audio context if suspended
                                 if (audioContext.state === 'suspended') {
                                     audioContext.resume().then(() => {
                                         console.log('Audio context resumed');
+                                        addDebugEvent('Audio context resumed', 'info');
+                                        updateDebugInfo();
                                     });
                                 }
                                 
@@ -399,9 +505,11 @@
                                 // Process buffered audio
                                 if (audioBuffer.length > 0) {
                                     console.log('Processing buffered audio:', audioBuffer.length, 'chunks');
+                                    addDebugEvent(`Processing ${audioBuffer.length} buffered audio chunks`, 'info');
                                     // Clear buffer - we'll start fresh
                                     audioBuffer = [];
                                 }
+                                updateDebugInfo();
                             }, 2000); // Wait 2 seconds after session update
                             break;
                         case 'conversation.item.input_audio_buffer.committed':
@@ -515,6 +623,7 @@
         
         async function setupMicrophone() {
             try {
+                addDebugEvent('Requesting microphone access...', 'info');
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         sampleRate: 24000,
@@ -523,6 +632,7 @@
                         noiseSuppression: true
                     }
                 });
+                addDebugEvent('Microphone access granted', 'success');
                 
                 // Create AudioContext for PCM processing
                 audioContext = new (window.AudioContext || window.webkitAudioContext)({
@@ -556,13 +666,17 @@
                 
                 // Store references for cleanup
                 mediaRecorder = { stream, processor, source };
+                addDebugEvent('Microphone setup completed', 'success');
+                updateDebugInfo();
                 
                 // Setup audio visualizer
                 setupAudioVisualizer();
                 
             } catch (error) {
                 console.error('Microphone setup failed:', error);
+                addDebugEvent(`Microphone setup failed: ${error.message}`, 'error');
                 updateStatus('error', 'Microphone access denied');
+                updateDebugInfo();
             }
         }
         
@@ -681,6 +795,34 @@
         function updateCentralButton(state, icon) {
             centralBtn.className = `central-btn ${state}`;
             centralIcon.textContent = icon;
+        }
+        
+        function addDebugEvent(message, type = 'info') {
+            const eventDiv = document.createElement('div');
+            eventDiv.className = `debug-event ${type}`;
+            eventDiv.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            debugEvents.insertBefore(eventDiv, debugEvents.firstChild);
+            
+            // Keep only last 10 events
+            while (debugEvents.children.length > 10) {
+                debugEvents.removeChild(debugEvents.lastChild);
+            }
+        }
+        
+        function updateDebugInfo() {
+            debugConnection.textContent = websocket ? 
+                `WebSocket: ${websocket.readyState === WebSocket.OPEN ? 'Connected' : 'Disconnected'}` : 
+                'No WebSocket';
+            
+            debugSession.textContent = sessionReady ? 
+                `Ready: ${sessionConfigured ? 'Configured' : 'Not configured'}` : 
+                'Not ready';
+            
+            debugAudio.textContent = audioContext ? 
+                `Context: ${audioContext.state}, Microphone: ${mediaRecorder ? 'Active' : 'Inactive'}` : 
+                'Not initialized';
+            
+            debugBuffer.textContent = `${audioBuffer.length} chunks buffered`;
         }
         
         function setupAudioVisualizer() {

@@ -260,6 +260,7 @@
                     websocket.send(JSON.stringify({
                         type: 'connect'
                     }));
+                    console.log('Sent connect message to proxy');
                 };
                 
                 websocket.onmessage = (event) => {
@@ -343,9 +344,11 @@
                             break;
                         case 'conversation.item.output_audio_buffer.speech_started':
                             console.log('Jessica started speaking');
+                            updateStatus('connected', 'Jessica is speaking...');
                             break;
                         case 'conversation.item.output_audio_buffer.speech_stopped':
                             console.log('Jessica stopped speaking');
+                            updateStatus('connected', 'Connected - Ready to talk!');
                             break;
                         case 'conversation.item.transcript.completed':
                             console.log('Transcript:', data.transcript);
@@ -357,8 +360,8 @@
                     }
                 };
                 
-                websocket.onclose = () => {
-                    console.log('WebSocket disconnected');
+                websocket.onclose = (event) => {
+                    console.log('WebSocket disconnected, code:', event.code, 'reason:', event.reason);
                     updateStatus('disconnected', 'Disconnected');
                     connectBtn.disabled = false;
                     disconnectBtn.disabled = true;
@@ -621,6 +624,7 @@
                         websocket.send(JSON.stringify({
                             type: 'conversation.item.output_audio_buffer.done'
                         }));
+                        console.log('Sent output_audio_buffer.done after Web Audio API playback');
                     }
                     playNextAudio();
                 };
@@ -653,6 +657,7 @@
                         websocket.send(JSON.stringify({
                             type: 'conversation.item.output_audio_buffer.done'
                         }));
+                        console.log('Sent output_audio_buffer.done after fallback audio playback');
                     }
                     playNextAudio();
                 };

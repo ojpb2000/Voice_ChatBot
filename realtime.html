@@ -357,13 +357,27 @@
         }
         
         async function endRealtimeCall() {
+            console.log('Ending realtime call...');
+            
             if (websocket) {
                 websocket.close();
                 websocket = null;
             }
+            
             isConnected = false;
+            audioQueue = [];
+            audioPlaying = false;
+            
             cleanupAudioVisualizer();
             cleanupMicrophone();
+            
+            // Update UI
+            updateStatus('disconnected', 'Disconnected');
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            muteBtn.disabled = true;
+            
+            console.log('Realtime call ended');
         }
         
         function toggleMute() {
@@ -534,8 +548,8 @@
                     bytes[i] = binaryString.charCodeAt(i);
                 }
                 
-                // Try different audio formats
-                const audioBlob = new Blob([bytes], { type: 'audio/wav' });
+                // Try different audio formats - OpenAI Realtime uses PCM
+                const audioBlob = new Blob([bytes], { type: 'audio/pcm' });
                 
                 // Create audio element and play
                 const audioUrl = URL.createObjectURL(audioBlob);
@@ -556,10 +570,43 @@
                 };
                 
                 audio.onerror = (error) => {
-                    console.error('Audio error:', error);
+                    console.warn('Audio playback failed, trying alternative format:', error);
                     URL.revokeObjectURL(audioUrl);
                     audioPlaying = false;
-                    playNextAudio();
+                    
+                    // Try with different audio format
+                    try {
+                        const audioBlob2 = new Blob([bytes], { type: 'audio/wav' });
+                        const audioUrl2 = URL.createObjectURL(audioBlob2);
+                        const audio2 = new Audio(audioUrl2);
+                        
+                        audio2.oncanplaythrough = () => {
+                            audio2.play().catch(() => {
+                                console.warn('Alternative audio format also failed');
+                                audioPlaying = false;
+                                playNextAudio();
+                            });
+                        };
+                        
+                        audio2.onended = () => {
+                            URL.revokeObjectURL(audioUrl2);
+                            audioPlaying = false;
+                            playNextAudio();
+                        };
+                        
+                        audio2.onerror = () => {
+                            console.warn('All audio formats failed');
+                            URL.revokeObjectURL(audioUrl2);
+                            audioPlaying = false;
+                            playNextAudio();
+                        };
+                        
+                        audioPlaying = true;
+                    } catch (e) {
+                        console.warn('Failed to create alternative audio:', e);
+                        audioPlaying = false;
+                        playNextAudio();
+                    }
                 };
                 
                 audioPlaying = true;

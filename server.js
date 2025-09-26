@@ -68,6 +68,7 @@ app.get('/api/test-key', async (req, res) => {
       success: true, 
       totalModels: models.data.length,
       realtimeModels: realtimeModels.map(m => m.id),
+      configuredModel: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview',
       apiKeyPrefix: apiKey.substring(0, 10) + '...'
     });
     
@@ -238,7 +239,8 @@ app.post('/api/realtime/session', async (req, res) => {
       },
       body: JSON.stringify({
         instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-        voice: 'alloy'
+        voice: 'alloy',
+        model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
       })
     });
 
@@ -310,9 +312,11 @@ wss.on('connection', (clientWs) => {
         
         const sessionConfig = {
           instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-          voice: 'alloy'
+          voice: 'alloy',
+          model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
         };
         
+        console.log('Using OpenAI model:', process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview');
         console.log('Session config:', JSON.stringify(sessionConfig, null, 2));
         
         const response = await fetch('https://api.openai.com/v1/realtime/sessions', {

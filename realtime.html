@@ -485,17 +485,18 @@
             if (websocket && websocket.readyState === WebSocket.OPEN && !isSendingAudio) {
                 isSendingAudio = true;
                 
-                // Send audio buffer append
-                websocket.send(JSON.stringify({
-                    type: 'conversation.item.input_audio_buffer.append',
-                    item: {
-                        type: 'input_audio_buffer',
-                        input_audio_buffer: {
-                            data: base64Audio
+                try {
+                    // Send audio buffer append
+                    websocket.send(JSON.stringify({
+                        type: 'conversation.item.input_audio_buffer.append',
+                        item: {
+                            type: 'input_audio_buffer',
+                            input_audio_buffer: {
+                                data: base64Audio
+                            }
                         }
-                    }
-                }));
-                
+                    }));
+                    
                 // Send audio buffer commit
                 websocket.send(JSON.stringify({
                     type: 'conversation.item.input_audio_buffer.commit',
@@ -507,18 +508,21 @@
                     }
                 }));
                 
-                // Request response
+                // Request response after committing audio
                 websocket.send(JSON.stringify({
                     type: 'response.create',
                     response: {
-                        modalities: ['text', 'audio'],
-                        instructions: 'Respond as Jessica Taylor, a 32-year-old woman with Type 1 Diabetes. Keep responses conversational and concise.'
+                        modalities: ['text', 'audio']
                     }
                 }));
+                    
+                } catch (error) {
+                    console.error('Error sending audio:', error);
+                }
                 
                 setTimeout(() => {
                     isSendingAudio = false;
-                }, 100);
+                }, 200);
             }
         }
         
@@ -581,9 +585,12 @@
         
         function setupAudioVisualizer() {
             try {
+                // Use the existing audioContext from setupMicrophone
                 if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.warn('No audio context available for visualizer');
+                    return;
                 }
+                
                 if (!analyser) {
                     analyser = audioContext.createAnalyser();
                     analyser.fftSize = 256;

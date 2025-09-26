@@ -456,12 +456,11 @@
                             updateStatus('connected', 'Configuring session...');
                             updateDebugInfo();
                             
-                            // Configure the session first
+                            // Configure the session first - try minimal configuration
                             websocket.send(JSON.stringify({
                                 type: 'session.update',
                                 session: {
-                                    instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-                                    voice: 'alloy'
+                                    instructions: 'You are Jessica Taylor, a helpful assistant. Always respond in English.'
                                 }
                             }));
                             console.log('Sent session configuration');
@@ -517,6 +516,7 @@
                             break;
                         case 'response.output_audio.delta':
                             console.log('Audio delta received, length:', data.delta ? data.delta.length : 'none');
+                            addDebugEvent(`Audio delta received: ${data.delta ? data.delta.length : 0} bytes`, 'info');
                             if (data.delta) {
                                 try {
                                     const binaryString = atob(data.delta);
@@ -526,11 +526,13 @@
                                     }
                                     audioQueue.push(pcmData);
                                     console.log('Base64 audio decoded and added to queue, queue length:', audioQueue.length);
+                                    addDebugEvent(`Audio added to queue, length: ${audioQueue.length}`, 'success');
                                     if (!audioPlaying) {
                                         playNextAudio();
                                     }
                                 } catch (e) {
                                     console.error('Failed to decode base64 audio:', e);
+                                    addDebugEvent(`Failed to decode audio: ${e.message}`, 'error');
                                 }
                             }
                             break;
@@ -550,7 +552,9 @@
                             break;
                         case 'error':
                             console.error('WebSocket error:', data.error);
+                            addDebugEvent(`Error: ${data.error}`, 'error');
                             updateStatus('error', `Error: ${data.error.message}`);
+                            updateDebugInfo();
                             break;
                     }
                 };

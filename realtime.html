@@ -250,24 +250,18 @@
                 const { client_secret, session_id } = await response.json();
                 sessionId = session_id;
                 
-                // Connect to OpenAI Realtime WebSocket
+                // Connect to OpenAI Realtime WebSocket with client_secret in URL
                 const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01&client_secret=${client_secret}`;
                 websocket = new WebSocket(wsUrl);
                 
                 websocket.onopen = () => {
                     console.log('WebSocket connected');
-                    updateStatus('connected', 'Connected - Ready to talk!');
-                    connectBtn.disabled = false;
-                    disconnectBtn.disabled = false;
-                    muteBtn.disabled = false;
-                    isConnected = true;
-                    setupAudioVisualizer();
-                    setupMicrophone();
                     
-                    // Send session configuration
+                    // First, send authentication
                     websocket.send(JSON.stringify({
                         type: 'session.update',
                         session: {
+                            client_secret: client_secret,
                             instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English (en-US). Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
                             voice: 'alloy',
                             input_audio_format: 'pcm16',
@@ -296,6 +290,13 @@
                     switch (data.type) {
                         case 'session.created':
                             console.log('Session created:', data.session);
+                            updateStatus('connected', 'Connected - Ready to talk!');
+                            connectBtn.disabled = false;
+                            disconnectBtn.disabled = false;
+                            muteBtn.disabled = false;
+                            isConnected = true;
+                            setupAudioVisualizer();
+                            setupMicrophone();
                             break;
                         case 'session.updated':
                             console.log('Session updated:', data.session);

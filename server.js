@@ -200,8 +200,7 @@ app.post('/api/realtime/session', async (req, res) => {
       },
       body: JSON.stringify({
         instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-        voice: 'alloy',
-        model: 'gpt-4o-realtime-preview-2024-10-01'
+        voice: 'alloy'
       })
     });
 
@@ -239,17 +238,22 @@ wss.on('connection', (clientWs) => {
       if (data.type === 'connect') {
         // Get session token
         const apiKey = process.env.OPENAI_API_KEY;
+        console.log('Creating OpenAI session with API key:', apiKey ? 'present' : 'missing');
+        
+        const sessionConfig = {
+          instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
+          voice: 'alloy'
+        };
+        
+        console.log('Session config:', JSON.stringify(sessionConfig, null, 2));
+        
         const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-            voice: 'alloy',
-            model: 'gpt-4o-realtime-preview-2024-10-01'
-          })
+          body: JSON.stringify(sessionConfig)
         });
         
         if (!response.ok) {

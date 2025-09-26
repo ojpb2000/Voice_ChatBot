@@ -247,7 +247,7 @@
                 const { client_secret } = await response.json();
                 
                 // Initialize Realtime client
-                const { Realtime } = await import('https://cdn.skypack.dev/@openai/realtime-sdk');
+                const { Realtime } = await import('https://esm.sh/@openai/realtime-sdk@0.1.0');
                 
                 realtimeClient = new Realtime({
                     apiKey: client_secret,

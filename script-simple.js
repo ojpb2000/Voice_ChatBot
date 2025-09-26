@@ -383,7 +383,7 @@ async function sendToBackend(message) {
         const response = await fetch(`${BACKEND_URL}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
+            body: JSON.stringify({ message: `${message}\n\nPlease reply in English only.` })
         });
         if (!response.ok) throw new Error('Bad response');
         const data = await response.json();
@@ -400,7 +400,7 @@ async function streamFromBackend(message, onToken, onDone) {
         return false;
     }
     try {
-        const url = `${BACKEND_URL}/api/chat/stream?` + new URLSearchParams({ message });
+        const url = `${BACKEND_URL}/api/chat/stream?` + new URLSearchParams({ message: `${message}\n\nPlease reply in English only.` });
         const response = await fetch(url, { headers: { Accept: 'text/event-stream' } });
         if (!response.ok || !response.body) return false;
         const reader = response.body.getReader();

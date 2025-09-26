@@ -296,6 +296,19 @@
                             disconnectBtn.disabled = false;
                             muteBtn.disabled = false;
                             isConnected = true;
+                            
+                            // Initialize audio context with user interaction
+                            if (!audioContext) {
+                                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            }
+                            
+                            // Resume audio context if suspended
+                            if (audioContext.state === 'suspended') {
+                                audioContext.resume().then(() => {
+                                    console.log('Audio context resumed');
+                                });
+                            }
+                            
                             setupMicrophone();
                             break;
                         case 'session.created':
@@ -561,10 +574,33 @@
 
         function playPCMAudio(pcmData) {
             try {
+                console.log('Audio context state:', audioContext ? audioContext.state : 'not created');
+                console.log('PCM data length:', pcmData.length);
+                
                 if (!audioContext) {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.log('Created new audio context');
                 }
                 
+                // Resume audio context if suspended
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        console.log('Audio context resumed, now playing audio');
+                        playPCMAudioInternal(pcmData);
+                    });
+                    return;
+                }
+                
+                playPCMAudioInternal(pcmData);
+                
+            } catch (error) {
+                console.warn('Web Audio API failed, trying fallback:', error);
+                playAudioFallback(pcmData);
+            }
+        }
+
+        function playPCMAudioInternal(pcmData) {
+            try {
                 // Convert PCM data to Float32Array
                 const samples = new Float32Array(pcmData.length / 2);
                 for (let i = 0; i < samples.length; i++) {
@@ -572,6 +608,8 @@
                     const sample = (pcmData[i * 2] | (pcmData[i * 2 + 1] << 8));
                     samples[i] = sample < 32768 ? sample / 32768 : (sample - 65536) / 32768;
                 }
+                
+                console.log('Converted to samples:', samples.length, 'max amplitude:', Math.max(...samples.map(Math.abs)));
                 
                 // Create audio buffer
                 const audioBuffer = audioContext.createBuffer(1, samples.length, 24000); // 24kHz sample rate
@@ -583,6 +621,7 @@
                 source.connect(audioContext.destination);
                 
                 source.onended = () => {
+                    console.log('Audio playback ended');
                     audioPlaying = false;
                     // Send confirmation that audio was played
                     if (websocket && websocket.readyState === WebSocket.OPEN) {
@@ -595,49 +634,56 @@
                 
                 source.start();
                 audioPlaying = true;
-                console.log('Playing PCM audio via Web Audio API');
+                console.log('Playing PCM audio via Web Audio API, duration:', audioBuffer.duration, 'seconds');
                 
             } catch (error) {
-                console.warn('Web Audio API failed, trying fallback:', error);
+                console.warn('Internal audio playback failed:', error);
+                playAudioFallback(pcmData);
+            }
+        }
+
+        function playAudioFallback(pcmData) {
+            try {
+                const wavData = createWAVFile(pcmData);
+                const audioBlob = new Blob([wavData], { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
                 
-                // Fallback: try to create a simple WAV file
-                try {
-                    const wavData = createWAVFile(pcmData);
-                    const audioBlob = new Blob([wavData], { type: 'audio/wav' });
-                    const audioUrl = URL.createObjectURL(audioBlob);
-                    const audio = new Audio(audioUrl);
-                    
-                    audio.onended = () => {
-                        URL.revokeObjectURL(audioUrl);
-                        audioPlaying = false;
-                        // Send confirmation that audio was played
-                        if (websocket && websocket.readyState === WebSocket.OPEN) {
-                            websocket.send(JSON.stringify({
-                                type: 'conversation.item.output_audio_buffer.done'
-                            }));
-                        }
-                        playNextAudio();
-                    };
-                    
-                    audio.onerror = () => {
-                        console.warn('Fallback audio also failed');
-                        URL.revokeObjectURL(audioUrl);
-                        audioPlaying = false;
-                        playNextAudio();
-                    };
-                    
-                    audio.play().catch(() => {
-                        console.warn('Audio play failed');
-                        audioPlaying = false;
-                        playNextAudio();
-                    });
-                    
-                    audioPlaying = true;
-                } catch (e) {
-                    console.warn('All audio methods failed:', e);
+                audio.volume = 1.0; // Ensure volume is at maximum
+                
+                audio.onended = () => {
+                    console.log('Fallback audio playback ended');
+                    URL.revokeObjectURL(audioUrl);
+                    audioPlaying = false;
+                    // Send confirmation that audio was played
+                    if (websocket && websocket.readyState === WebSocket.OPEN) {
+                        websocket.send(JSON.stringify({
+                            type: 'conversation.item.output_audio_buffer.done'
+                        }));
+                    }
+                    playNextAudio();
+                };
+                
+                audio.onerror = (e) => {
+                    console.warn('Fallback audio also failed:', e);
+                    URL.revokeObjectURL(audioUrl);
                     audioPlaying = false;
                     playNextAudio();
-                }
+                };
+                
+                audio.play().then(() => {
+                    console.log('Fallback audio started playing');
+                }).catch((e) => {
+                    console.warn('Audio play failed:', e);
+                    audioPlaying = false;
+                    playNextAudio();
+                });
+                
+                audioPlaying = true;
+            } catch (e) {
+                console.warn('All audio methods failed:', e);
+                audioPlaying = false;
+                playNextAudio();
             }
         }
 

@@ -238,21 +238,27 @@
         
         async function startRealtimeCall() {
             try {
+                console.log('Starting realtime call...');
                 updateStatus('connecting', 'Connecting...');
                 connectBtn.disabled = true;
                 
                 // Get session token from backend
+                console.log('Fetching session from:', `${BACKEND_URL}/api/realtime/session`);
                 const response = await fetch(`${BACKEND_URL}/api/realtime/session`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 
+                console.log('Session response status:', response.status);
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                    const errorText = await response.text();
+                    console.error('Session fetch failed:', response.status, errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 // Connect to our WebSocket proxy (same port as HTTP)
                 const wsUrl = `wss://voice-chatbot-a9u5.onrender.com`;
+                console.log('Connecting to WebSocket:', wsUrl);
                 websocket = new WebSocket(wsUrl);
                 
                 websocket.onopen = () => {
@@ -263,6 +269,12 @@
                         type: 'connect'
                     }));
                     console.log('Sent connect message to proxy');
+                };
+                
+                websocket.onerror = (error) => {
+                    console.error('WebSocket connection error:', error);
+                    updateStatus('error', 'Connection failed');
+                    connectBtn.disabled = false;
                 };
                 
                 websocket.onmessage = (event) => {

@@ -247,17 +247,24 @@ wss.on('connection', (clientWs) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English (en-US). Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
+            instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
             voice: 'alloy',
-            model: 'gpt-4o-realtime-preview-2024-10-01',
-            tools: [],
-            tool_choice: 'auto',
-            temperature: 0.7,
-            max_response_output_tokens: 300
+            model: 'gpt-4o-realtime-preview-2024-10-01'
           })
         });
         
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('OpenAI session creation failed:', response.status, errorText);
+          clientWs.send(JSON.stringify({ 
+            type: 'error', 
+            error: `Session creation failed: ${response.status} ${errorText}` 
+          }));
+          return;
+        }
+        
         const sessionData = await response.json();
+        console.log('OpenAI session created successfully:', sessionData.id);
         
         // Connect to OpenAI Realtime
         openaiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01&client_secret=${sessionData.client_secret}`);

@@ -308,9 +308,10 @@
                             console.log('Input audio committed');
                             break;
                         case 'conversation.item.output_audio_buffer.committed':
-                            console.log('Output audio committed');
+                            console.log('Output audio committed, audio length:', data.audio ? data.audio.length : 'none');
                             if (data.audio) {
                                 audioQueue.push(data.audio);
+                                console.log('Audio added to queue, queue length:', audioQueue.length);
                                 if (!audioPlaying) {
                                     playNextAudio();
                                 }
@@ -583,6 +584,12 @@
                 
                 source.onended = () => {
                     audioPlaying = false;
+                    // Send confirmation that audio was played
+                    if (websocket && websocket.readyState === WebSocket.OPEN) {
+                        websocket.send(JSON.stringify({
+                            type: 'conversation.item.output_audio_buffer.done'
+                        }));
+                    }
                     playNextAudio();
                 };
                 
@@ -603,6 +610,12 @@
                     audio.onended = () => {
                         URL.revokeObjectURL(audioUrl);
                         audioPlaying = false;
+                        // Send confirmation that audio was played
+                        if (websocket && websocket.readyState === WebSocket.OPEN) {
+                            websocket.send(JSON.stringify({
+                                type: 'conversation.item.output_audio_buffer.done'
+                            }));
+                        }
                         playNextAudio();
                     };
                     
@@ -672,6 +685,13 @@
             if (audioQueue.length > 0 && !audioPlaying) {
                 const nextAudio = audioQueue.shift();
                 playAudioFromBase64(nextAudio);
+            } else if (audioQueue.length === 0 && !audioPlaying) {
+                // No more audio to play, send confirmation
+                if (websocket && websocket.readyState === WebSocket.OPEN) {
+                    websocket.send(JSON.stringify({
+                        type: 'conversation.item.output_audio_buffer.done'
+                    }));
+                }
             }
         }
     </script>

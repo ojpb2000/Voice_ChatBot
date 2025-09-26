@@ -250,7 +250,8 @@ app.post('/api/realtime/session', async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
+        // Try without model first
+        // model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
       })
     });
 
@@ -322,7 +323,8 @@ wss.on('connection', (clientWs) => {
         
         // Try with minimal configuration first
         const sessionConfig = {
-          model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
+          // Try without model first to see if that's the issue
+          // model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
         };
         
         console.log('Using OpenAI model:', process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview');
@@ -355,9 +357,8 @@ wss.on('connection', (clientWs) => {
         const sessionData = await response.json();
         console.log('OpenAI session created successfully:', sessionData.id);
         
-        // Connect to OpenAI Realtime
-        const modelParam = process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview';
-        const wsUrl = `wss://api.openai.com/v1/realtime?model=${modelParam}&client_secret=${sessionData.client_secret}`;
+        // Connect to OpenAI Realtime - try without model parameter
+        const wsUrl = `wss://api.openai.com/v1/realtime?client_secret=${sessionData.client_secret}`;
         console.log('Connecting to OpenAI WebSocket:', wsUrl);
         
         openaiWs = new WebSocket(wsUrl);

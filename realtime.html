@@ -210,6 +210,8 @@
         let mediaRecorder = null;
         let audioChunks = [];
         let sessionId = null;
+        let audioQueue = [];
+        let audioPlaying = false;
         
         // DOM elements
         const statusIndicator = document.getElementById('statusIndicator');
@@ -294,7 +296,6 @@
                             disconnectBtn.disabled = false;
                             muteBtn.disabled = false;
                             isConnected = true;
-                            setupAudioVisualizer();
                             setupMicrophone();
                             break;
                         case 'session.created':
@@ -410,6 +411,9 @@
                 // Start recording
                 mediaRecorder.start(100); // Record in 100ms chunks
                 
+                // Setup audio visualizer
+                setupAudioVisualizer();
+                
             } catch (error) {
                 console.error('Microphone setup failed:', error);
                 updateStatus('error', 'Microphone access denied');
@@ -461,17 +465,22 @@
             statusText.textContent = text;
         }
         
-        async function setupAudioVisualizer() {
+        function setupAudioVisualizer() {
             try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (!analyser) {
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                }
                 
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                microphone = audioContext.createMediaStreamSource(stream);
-                microphone.connect(analyser);
-                
-                animateAudioVisualizer();
+                // Use the existing microphone stream from mediaRecorder
+                if (mediaRecorder && mediaRecorder.stream) {
+                    microphone = audioContext.createMediaStreamSource(mediaRecorder.stream);
+                    microphone.connect(analyser);
+                    animateAudioVisualizer();
+                }
             } catch (error) {
                 console.error('Audio visualizer setup failed:', error);
             }

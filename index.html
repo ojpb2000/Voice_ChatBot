@@ -122,6 +122,15 @@
 
         <script>
                 window.BACKEND_URL = 'https://voice-chatbot-a9u5.onrender.com';
+                
+                // Check authentication on page load
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Check authentication
+                    if (!sessionStorage.getItem('authenticated')) {
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                });
         </script>
         <script src="script-simple.js?v=4"></script>
 </body>

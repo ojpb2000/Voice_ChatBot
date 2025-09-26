@@ -196,37 +196,37 @@ app.post('/api/realtime/session', async (req, res) => {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
-+      },
-+      body: JSON.stringify({
-+        instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English (en-US). Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
-+        voice: 'alloy', // Female voice
-+        model: 'gpt-4o-realtime-preview-2024-10-01',
-+        tools: [],
-+        tool_choice: 'auto',
-+        temperature: 0.7,
-+        max_response_output_tokens: 300
-+      })
-+    });
+      },
+      body: JSON.stringify({
+        instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English (en-US). Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
+        voice: 'alloy', // Female voice
+        model: 'gpt-4o-realtime-preview-2024-10-01',
+        tools: [],
+        tool_choice: 'auto',
+        temperature: 0.7,
+        max_response_output_tokens: 300
+      })
+    });
 
-+    if (!response.ok) {
-+      const error = await response.text();
-+      console.error('Realtime session creation failed:', error);
-+      return res.status(500).json({ error: 'Failed to create realtime session' });
-+    }
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Realtime session creation failed:', error);
+      return res.status(500).json({ error: 'Failed to create realtime session' });
+    }
 
-+    const data = await response.json();
-+    res.json({ 
-+      client_secret: data.client_secret,
-+      session_id: data.id 
-+    });
-+  } catch (err) {
-+    console.error('Realtime session error:', err);
-+    res.status(500).json({ error: 'Realtime session failed' });
-+  }
-+});
+    const data = await response.json();
+    res.json({ 
+      client_secret: data.client_secret,
+      session_id: data.id 
+    });
+  } catch (err) {
+    console.error('Realtime session error:', err);
+    res.status(500).json({ error: 'Realtime session failed' });
+  }
+});
 
-+app.listen(PORT, () => {
-+  console.log(`Server listening on port ${PORT}`);
-+});
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
 
 

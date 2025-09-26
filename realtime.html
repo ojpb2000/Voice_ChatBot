@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Realtime Chat - Jessica Taylor</title>
+    <link rel="stylesheet" href="style.css?v=4">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .mode-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .mode-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        .realtime-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .status-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-connecting { background: #fbbf24; }
+        .status-connected { background: #10b981; }
+        .status-error { background: #ef4444; }
+        .status-disconnected { background: #6b7280; }
+        .control-panel {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        .control-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-connect {
+            background: #10b981;
+            color: white;
+        }
+        .btn-connect:hover:not(:disabled) {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        .btn-disconnect {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-disconnect:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        .btn-mute {
+            background: #f59e0b;
+            color: white;
+        }
+        .btn-mute:hover:not(:disabled) {
+            background: #d97706;
+            transform: translateY(-2px);
+        }
+        .btn-unmute {
+            background: #6366f1;
+            color: white;
+        }
+        .btn-unmute:hover:not(:disabled) {
+            background: #4f46e5;
+            transform: translateY(-2px);
+        }
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .audio-visualizer {
+            width: 200px;
+            height: 60px;
+            margin: 20px auto;
+            background: #f3f4f6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+        }
+        .audio-bar {
+            width: 4px;
+            background: #667eea;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+        .instructions {
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #374151;
+        }
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="mode-toggle">
+        <button class="mode-btn" onclick="window.location.href='index.html'">
+            📝 Text Mode
+        </button>
+    </div>
+
+    <div class="realtime-container">
+        <div class="status-card">
+            <h1>🎤 Realtime Chat with Jessica</h1>
+            <p>Full-duplex voice conversation with low latency</p>
+            
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+
+        <div class="control-panel">
+            <button id="connectBtn" class="control-btn btn-connect">
+                🎤 Start Call
+            </button>
+            <button id="disconnectBtn" class="control-btn btn-disconnect" disabled>
+                📞 End Call
+            </button>
+            <button id="muteBtn" class="control-btn btn-mute" disabled>
+                🔇 Mute
+            </button>
+        </div>
+
+        <div class="audio-visualizer" id="audioVisualizer">
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+            <div class="audio-bar"></div>
+        </div>
+
+        <div class="instructions">
+            <h3>How to use Realtime Mode:</h3>
+            <ul>
+                <li><strong>Click "Start Call"</strong> to begin a voice conversation</li>
+                <li><strong>Speak naturally</strong> - Jessica will respond in real-time</li>
+                <li><strong>Barge-in supported</strong> - you can interrupt her anytime</li>
+                <li><strong>Mute/Unmute</strong> your microphone as needed</li>
+                <li><strong>Click "End Call"</strong> to disconnect</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const BACKEND_URL = 'https://voice-chatbot-a9u5.onrender.com';
+        
+        // State
+        let realtimeClient = null;
+        let isConnected = false;
+        let isMuted = false;
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        
+        // DOM elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const audioVisualizer = document.getElementById('audioVisualizer');
+        const audioBars = audioVisualizer.querySelectorAll('.audio-bar');
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            updateStatus('disconnected', 'Disconnected');
+        });
+        
+        function setupEventListeners() {
+            connectBtn.addEventListener('click', startRealtimeCall);
+            disconnectBtn.addEventListener('click', endRealtimeCall);
+            muteBtn.addEventListener('click', toggleMute);
+        }
+        
+        async function startRealtimeCall() {
+            try {
+                updateStatus('connecting', 'Connecting...');
+                connectBtn.disabled = true;
+                
+                // Get session token from backend
+                const response = await fetch(`${BACKEND_URL}/api/realtime/session`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                const { client_secret } = await response.json();
+                
+                // Initialize Realtime client
+                const { Realtime } = await import('https://cdn.skypack.dev/@openai/realtime-sdk');
+                
+                realtimeClient = new Realtime({
+                    apiKey: client_secret,
+                    dangerouslyAllowBrowser: true
+                });
+                
+                // Setup event handlers
+                realtimeClient.on('connectionStateChanged', (state) => {
+                    console.log('Connection state:', state);
+                    if (state === 'connected') {
+                        updateStatus('connected', 'Connected - Ready to talk!');
+                        disconnectBtn.disabled = false;
+                        muteBtn.disabled = false;
+                        setupAudioVisualizer();
+                    } else if (state === 'disconnected') {
+                        updateStatus('disconnected', 'Disconnected');
+                        connectBtn.disabled = false;
+                        disconnectBtn.disabled = true;
+                        muteBtn.disabled = true;
+                        cleanupAudioVisualizer();
+                    }
+                });
+                
+                realtimeClient.on('error', (error) => {
+                    console.error('Realtime error:', error);
+                    updateStatus('error', `Error: ${error.message}`);
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    muteBtn.disabled = true;
+                });
+                
+                // Connect
+                await realtimeClient.connect();
+                isConnected = true;
+                
+            } catch (error) {
+                console.error('Failed to start realtime call:', error);
+                updateStatus('error', `Failed to connect: ${error.message}`);
+                connectBtn.disabled = false;
+            }
+        }
+        
+        async function endRealtimeCall() {
+            if (realtimeClient) {
+                await realtimeClient.disconnect();
+                realtimeClient = null;
+            }
+            isConnected = false;
+            cleanupAudioVisualizer();
+        }
+        
+        function toggleMute() {
+            if (!realtimeClient) return;
+            
+            isMuted = !isMuted;
+            
+            if (isMuted) {
+                realtimeClient.audio.microphone.disable();
+                muteBtn.innerHTML = '🔊 Unmute';
+                muteBtn.className = 'control-btn btn-unmute';
+            } else {
+                realtimeClient.audio.microphone.enable();
+                muteBtn.innerHTML = '🔇 Mute';
+                muteBtn.className = 'control-btn btn-mute';
+            }
+        }
+        
+        function updateStatus(type, text) {
+            statusIndicator.className = `status-indicator status-${type}`;
+            statusText.textContent = text;
+        }
+        
+        async function setupAudioVisualizer() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+                
+                animateAudioVisualizer();
+            } catch (error) {
+                console.error('Audio visualizer setup failed:', error);
+            }
+        }
+        
+        function cleanupAudioVisualizer() {
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            if (microphone) {
+                microphone.disconnect();
+                microphone = null;
+            }
+            analyser = null;
+        }
+        
+        function animateAudioVisualizer() {
+            if (!analyser) return;
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            function draw() {
+                if (!analyser) return;
+                
+                analyser.getByteFrequencyData(dataArray);
+                
+                // Update audio bars
+                audioBars.forEach((bar, index) => {
+                    const value = dataArray[index * 8] || 0;
+                    const height = Math.max(4, (value / 255) * 50);
+                    bar.style.height = `${height}px`;
+                });
+                
+                requestAnimationFrame(draw);
+            }
+            
+            draw();
+        }
+    </script>
+</body>
+</html>

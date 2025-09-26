@@ -38,6 +38,44 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'voice-chatbot-backend', time: new Date().toISOString() });
 });
 
+// Test OpenAI API key endpoint
+app.get('/api/test-key', async (req, res) => {
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({ error: 'API key not configured' });
+    }
+    
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      return res.status(response.status).json({ 
+        error: 'API key test failed', 
+        status: response.status,
+        text: await response.text()
+      });
+    }
+    
+    const models = await response.json();
+    const realtimeModels = models.data.filter(m => m.id.includes('realtime'));
+    
+    res.json({ 
+      success: true, 
+      totalModels: models.data.length,
+      realtimeModels: realtimeModels.map(m => m.id),
+      apiKeyPrefix: apiKey.substring(0, 10) + '...'
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Simple chat endpoint using OpenAI Chat Completions via REST
 app.post('/api/chat', async (req, res) => {
   try {
@@ -240,6 +278,36 @@ wss.on('connection', (clientWs) => {
         const apiKey = process.env.OPENAI_API_KEY;
         console.log('Creating OpenAI session with API key:', apiKey ? 'present' : 'missing');
         
+        // First, let's test if the API key works with a simple request
+        try {
+          const testResponse = await fetch('https://api.openai.com/v1/models', {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (!testResponse.ok) {
+            console.error('API key test failed:', testResponse.status, await testResponse.text());
+            clientWs.send(JSON.stringify({
+              type: 'error',
+              error: { message: 'API key validation failed' }
+            }));
+            return;
+          }
+          
+          const models = await testResponse.json();
+          console.log('Available models:', models.data.map(m => m.id).filter(id => id.includes('realtime')));
+          
+        } catch (error) {
+          console.error('API key test error:', error);
+          clientWs.send(JSON.stringify({
+            type: 'error',
+            error: { message: 'API key test failed: ' + error.message }
+          }));
+          return;
+        }
+        
         const sessionConfig = {
           instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English. Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
           voice: 'alloy'
@@ -259,9 +327,14 @@ wss.on('connection', (clientWs) => {
         if (!response.ok) {
           const errorText = await response.text();
           console.error('OpenAI session creation failed:', response.status, errorText);
+          console.error('Request headers:', {
+            'Authorization': `Bearer ${apiKey ? apiKey.substring(0, 10) + '...' : 'missing'}`,
+            'Content-Type': 'application/json'
+          });
+          console.error('Request body:', JSON.stringify(sessionConfig, null, 2));
           clientWs.send(JSON.stringify({ 
             type: 'error', 
-            error: `Session creation failed: ${response.status} ${errorText}` 
+            error: { message: `Session creation failed: ${response.status} ${errorText}` }
           }));
           return;
         }

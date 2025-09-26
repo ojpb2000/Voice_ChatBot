@@ -38,6 +38,18 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'voice-chatbot-backend', time: new Date().toISOString() });
 });
 
+// Authentication endpoint
+app.post('/api/auth', (req, res) => {
+  const { username, password } = req.body;
+  
+  // Simple hardcoded authentication
+  if (username === 'gato' && password === 'gato123') {
+    res.json({ success: true, message: 'Authentication successful' });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+});
+
 // Test OpenAI API key endpoint
 app.get('/api/test-key', async (req, res) => {
   try {

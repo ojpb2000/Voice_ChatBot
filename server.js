@@ -225,9 +225,9 @@ app.post('/api/realtime/session', async (req, res) => {
   }
 });
 
-// WebSocket proxy for Realtime API
-const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 8080 });
+// Upgrade HTTP to WebSocket for Realtime API proxy
+const server = require('http').createServer(app);
+const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (clientWs) => {
   let openaiWs = null;
@@ -294,9 +294,9 @@ wss.on('connection', (clientWs) => {
   });
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
-  console.log(`WebSocket proxy listening on port 8080`);
+  console.log(`WebSocket proxy available on same port`);
 });
 
 

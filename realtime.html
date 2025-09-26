@@ -247,8 +247,8 @@
                     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
                 }
                 
-                // Connect to our WebSocket proxy
-                const wsUrl = `wss://voice-chatbot-a9u5.onrender.com:8080`;
+                // Connect to our WebSocket proxy (same port as HTTP)
+                const wsUrl = `wss://voice-chatbot-a9u5.onrender.com`;
                 websocket = new WebSocket(wsUrl);
                 
                 websocket.onopen = () => {

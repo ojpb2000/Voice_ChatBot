@@ -621,10 +621,16 @@
                     audioPlaying = false;
                     // Send confirmation that audio was played
                     if (websocket && websocket.readyState === WebSocket.OPEN) {
-                        websocket.send(JSON.stringify({
-                            type: 'conversation.item.output_audio_buffer.done'
-                        }));
-                        console.log('Sent output_audio_buffer.done after Web Audio API playback');
+                        try {
+                            websocket.send(JSON.stringify({
+                                type: 'conversation.item.output_audio_buffer.done'
+                            }));
+                            console.log('Sent output_audio_buffer.done after Web Audio API playback');
+                        } catch (e) {
+                            console.warn('Failed to send audio confirmation:', e);
+                        }
+                    } else {
+                        console.warn('WebSocket not open, cannot send audio confirmation');
                     }
                     playNextAudio();
                 };
@@ -654,10 +660,16 @@
                     audioPlaying = false;
                     // Send confirmation that audio was played
                     if (websocket && websocket.readyState === WebSocket.OPEN) {
-                        websocket.send(JSON.stringify({
-                            type: 'conversation.item.output_audio_buffer.done'
-                        }));
-                        console.log('Sent output_audio_buffer.done after fallback audio playback');
+                        try {
+                            websocket.send(JSON.stringify({
+                                type: 'conversation.item.output_audio_buffer.done'
+                            }));
+                            console.log('Sent output_audio_buffer.done after fallback audio playback');
+                        } catch (e) {
+                            console.warn('Failed to send fallback audio confirmation:', e);
+                        }
+                    } else {
+                        console.warn('WebSocket not open, cannot send fallback audio confirmation');
                     }
                     playNextAudio();
                 };
@@ -732,10 +744,16 @@
             } else if (audioQueue.length === 0 && !audioPlaying) {
                 // No more audio to play, send confirmation
                 if (websocket && websocket.readyState === WebSocket.OPEN) {
-                    websocket.send(JSON.stringify({
-                        type: 'conversation.item.output_audio_buffer.done'
-                    }));
-                    console.log('Sent output_audio_buffer.done as queue is empty and not playing.');
+                    try {
+                        websocket.send(JSON.stringify({
+                            type: 'conversation.item.output_audio_buffer.done'
+                        }));
+                        console.log('Sent output_audio_buffer.done as queue is empty and not playing.');
+                    } catch (e) {
+                        console.warn('Failed to send queue empty confirmation:', e);
+                    }
+                } else {
+                    console.warn('WebSocket not open, cannot send queue empty confirmation');
                 }
             }
         }

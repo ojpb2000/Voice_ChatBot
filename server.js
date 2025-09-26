@@ -270,12 +270,22 @@ wss.on('connection', (clientWs) => {
           clientWs.send(data);
         });
         
-        openaiWs.on('close', () => {
+        openaiWs.on('close', (code, reason) => {
+          console.log('OpenAI WebSocket closed:', code, reason.toString());
+          if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.send(JSON.stringify({ 
+              type: 'error', 
+              error: `OpenAI connection closed: ${code} ${reason.toString()}` 
+            }));
+          }
           clientWs.close();
         });
         
         openaiWs.on('error', (error) => {
-          clientWs.send(JSON.stringify({ type: 'error', error: error.message }));
+          console.error('OpenAI WebSocket error:', error);
+          if (clientWs.readyState === WebSocket.OPEN) {
+            clientWs.send(JSON.stringify({ type: 'error', error: error.message }));
+          }
         });
         
       } else if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {

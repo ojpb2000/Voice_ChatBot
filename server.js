@@ -225,8 +225,78 @@ app.post('/api/realtime/session', async (req, res) => {
   }
 });
 
+// WebSocket proxy for Realtime API
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+
+wss.on('connection', (clientWs) => {
+  let openaiWs = null;
+  
+  clientWs.on('message', async (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.type === 'connect') {
+        // Get session token
+        const apiKey = process.env.OPENAI_API_KEY;
+        const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            instructions: `You are Jessica Taylor, a 32-year-old woman living with Type 1 Diabetes since adolescence. Always respond in English (en-US). Be conversational, empathetic, and warm. Keep responses concise (2-3 sentences) unless asked to elaborate. Avoid medical advice; share personal experience and options to discuss with a doctor.`,
+            voice: 'alloy',
+            model: 'gpt-4o-realtime-preview-2024-10-01',
+            tools: [],
+            tool_choice: 'auto',
+            temperature: 0.7,
+            max_response_output_tokens: 300
+          })
+        });
+        
+        const sessionData = await response.json();
+        
+        // Connect to OpenAI Realtime
+        openaiWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01&client_secret=${sessionData.client_secret}`);
+        
+        openaiWs.on('open', () => {
+          clientWs.send(JSON.stringify({ type: 'connected' }));
+        });
+        
+        openaiWs.on('message', (data) => {
+          clientWs.send(data);
+        });
+        
+        openaiWs.on('close', () => {
+          clientWs.close();
+        });
+        
+        openaiWs.on('error', (error) => {
+          clientWs.send(JSON.stringify({ type: 'error', error: error.message }));
+        });
+        
+      } else if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
+        // Forward message to OpenAI
+        openaiWs.send(message);
+      }
+      
+    } catch (error) {
+      clientWs.send(JSON.stringify({ type: 'error', error: error.message }));
+    }
+  });
+  
+  clientWs.on('close', () => {
+    if (openaiWs) {
+      openaiWs.close();
+    }
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  console.log(`WebSocket proxy listening on port 8080`);
 });
 
 

@@ -276,9 +276,10 @@
                             const reader = new FileReader();
                             reader.onload = () => {
                                 const audioData = reader.result;
-                                // Convert to base64 and play
-                                const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioData)));
-                                audioQueue.push(base64Audio);
+                                // Convert ArrayBuffer to Uint8Array and add to queue
+                                const pcmData = new Uint8Array(audioData);
+                                audioQueue.push(pcmData);
+                                console.log('Binary audio added to queue, queue length:', audioQueue.length);
                                 if (!audioPlaying) {
                                     playNextAudio();
                                 }
@@ -323,10 +324,20 @@
                         case 'conversation.item.output_audio_buffer.committed':
                             console.log('Output audio committed, audio length:', data.audio ? data.audio.length : 'none');
                             if (data.audio) {
-                                audioQueue.push(data.audio);
-                                console.log('Audio added to queue, queue length:', audioQueue.length);
-                                if (!audioPlaying) {
-                                    playNextAudio();
+                                // data.audio is base64 encoded PCM data
+                                try {
+                                    const binaryString = atob(data.audio);
+                                    const pcmData = new Uint8Array(binaryString.length);
+                                    for (let i = 0; i < binaryString.length; i++) {
+                                        pcmData[i] = binaryString.charCodeAt(i);
+                                    }
+                                    audioQueue.push(pcmData);
+                                    console.log('Base64 audio decoded and added to queue, queue length:', audioQueue.length);
+                                    if (!audioPlaying) {
+                                        playNextAudio();
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to decode base64 audio:', e);
                                 }
                             }
                             break;
@@ -553,24 +564,6 @@
             draw();
         }
         
-        function playAudioFromBase64(base64Audio) {
-            try {
-                // Convert base64 to audio data
-                const binaryString = atob(base64Audio);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                // Use Web Audio API to play PCM data
-                playPCMAudio(bytes);
-                
-            } catch (error) {
-                console.error('Failed to process audio from base64:', error);
-                audioPlaying = false;
-                playNextAudio();
-            }
-        }
 
         function playPCMAudio(pcmData) {
             try {
@@ -729,14 +722,15 @@
 
         function playNextAudio() {
             if (audioQueue.length > 0 && !audioPlaying) {
-                const nextAudio = audioQueue.shift();
-                playAudioFromBase64(nextAudio);
+                const nextAudio = audioQueue.shift(); // nextAudio is now a Uint8Array
+                playPCMAudio(nextAudio); // Call playPCMAudio directly
             } else if (audioQueue.length === 0 && !audioPlaying) {
                 // No more audio to play, send confirmation
                 if (websocket && websocket.readyState === WebSocket.OPEN) {
                     websocket.send(JSON.stringify({
                         type: 'conversation.item.output_audio_buffer.done'
                     }));
+                    console.log('Sent output_audio_buffer.done as queue is empty and not playing.');
                 }
             }
         }

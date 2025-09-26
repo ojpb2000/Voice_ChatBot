@@ -317,9 +317,12 @@
                             break;
                         case 'session.created':
                             console.log('Session created:', data.session);
+                            sessionReady = true;
+                            updateStatus('connected', 'Connected - Ready to talk!');
                             break;
                         case 'session.updated':
                             console.log('Session updated:', data.session);
+                            sessionReady = true;
                             break;
                         case 'conversation.item.input_audio_buffer.committed':
                             console.log('Input audio committed');
@@ -371,6 +374,7 @@
                     disconnectBtn.disabled = true;
                     muteBtn.disabled = true;
                     isConnected = false;
+                    sessionReady = false;
                     cleanupAudioVisualizer();
                     cleanupMicrophone();
                 };
@@ -481,8 +485,10 @@
             }
         }
         
+        let sessionReady = false;
+        
         function sendAudioToOpenAI(base64Audio) {
-            if (websocket && websocket.readyState === WebSocket.OPEN && !isSendingAudio) {
+            if (websocket && websocket.readyState === WebSocket.OPEN && !isSendingAudio && sessionReady) {
                 isSendingAudio = true;
                 
                 try {
@@ -497,24 +503,24 @@
                         }
                     }));
                     
-                // Send audio buffer commit
-                websocket.send(JSON.stringify({
-                    type: 'conversation.item.input_audio_buffer.commit',
-                    item: {
-                        type: 'input_audio_buffer',
-                        input_audio_buffer: {
-                            data: base64Audio
+                    // Send audio buffer commit
+                    websocket.send(JSON.stringify({
+                        type: 'conversation.item.input_audio_buffer.commit',
+                        item: {
+                            type: 'input_audio_buffer',
+                            input_audio_buffer: {
+                                data: base64Audio
+                            }
                         }
-                    }
-                }));
-                
-                // Request response after committing audio
-                websocket.send(JSON.stringify({
-                    type: 'response.create',
-                    response: {
-                        modalities: ['text', 'audio']
-                    }
-                }));
+                    }));
+                    
+                    // Request response after committing audio
+                    websocket.send(JSON.stringify({
+                        type: 'response.create',
+                        response: {
+                            modalities: ['text', 'audio']
+                        }
+                    }));
                     
                 } catch (error) {
                     console.error('Error sending audio:', error);

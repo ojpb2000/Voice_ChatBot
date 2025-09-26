@@ -403,6 +403,10 @@
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
+                // Get session data from response
+                const sessionData = await response.json();
+                console.log('Session data received:', sessionData);
+                
                 // Update model info if available
                 if (sessionData.model) {
                     currentModel = sessionData.model;
@@ -589,13 +593,13 @@
                 websocket.onerror = (error) => {
                     console.error('WebSocket error:', error);
                     updateStatus('error', 'Connection error');
-                    connectBtn.disabled = false;
+                    updateCentralButton('error', '❌');
                 };
                 
             } catch (error) {
                 console.error('Failed to start realtime call:', error);
                 updateStatus('error', `Failed to connect: ${error.message}`);
-                connectBtn.disabled = false;
+                updateCentralButton('error', '❌');
             }
         }
         

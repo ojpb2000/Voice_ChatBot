@@ -8,9 +8,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Basic CORS: allow GitHub Pages and local dev; optionally ALLOWED_ORIGINS env (comma-separated)
+// Basic CORS: allow GitHub Pages, Vercel, and local dev; optionally ALLOWED_ORIGINS env (comma-separated)
 const defaultOrigins = [
   'https://ojpb2000.github.io',
+  'https://voice-chat-bot-kappa.vercel.app',
+  'https://voice-chat-bot-kappa.vercel.app',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://localhost:5500',

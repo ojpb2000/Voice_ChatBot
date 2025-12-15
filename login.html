@@ -155,7 +155,9 @@
                     body: JSON.stringify({ username, password })
                 });
                 
-                if (response.ok) {
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
                     // Store authentication status
                     sessionStorage.setItem('authenticated', 'true');
                     sessionStorage.setItem('username', username);
@@ -163,12 +165,14 @@
                     // Redirect to dashboard
                     window.location.href = 'dashboard.html';
                 } else {
-                    const error = await response.text();
-                    errorMessage.textContent = 'Invalid credentials. Please try again.';
+                    const errorMsg = data.message || 'Invalid credentials. Please try again.';
+                    errorMessage.textContent = errorMsg;
                     errorMessage.style.display = 'block';
+                    console.error('Login error:', data);
                 }
             } catch (error) {
-                errorMessage.textContent = 'Connection error. Please try again.';
+                console.error('Login connection error:', error);
+                errorMessage.textContent = 'Connection error. Please check your internet connection and try again.';
                 errorMessage.style.display = 'block';
             } finally {
                 loginBtn.disabled = false;

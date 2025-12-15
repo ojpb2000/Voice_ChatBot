@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const WebSocket = require('ws');
+const FormData = require('form-data');
 require('dotenv').config();
 
 const app = express();
@@ -56,6 +57,15 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Whisper transcription endpoint
+app.options('/api/transcribe', (req, res) => {
+  // Handle preflight requests
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.status(204).end();
+});
+
 app.post('/api/transcribe', async (req, res) => {
   try {
     const { audio, model = 'whisper-1' } = req.body;
@@ -72,31 +82,29 @@ app.post('/api/transcribe', async (req, res) => {
     // Convert base64 to buffer
     const audioBuffer = Buffer.from(audio, 'base64');
     
-    // Create form data for Whisper API
+    // Create form data for Whisper API using form-data library
     const formData = new FormData();
-    formData.append('file', new Blob([audioBuffer], { type: 'audio/webm' }), 'audio.webm');
+    formData.append('file', audioBuffer, {
+      filename: 'audio.webm',
+      contentType: 'audio/webm'
+    });
     formData.append('model', model);
     formData.append('language', 'en');
     formData.append('response_format', 'json');
     
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
+    // Use axios to send multipart/form-data
+    const response = await axios.post('https://api.openai.com/v1/audio/transcriptions', formData, {
       headers: {
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        ...formData.getHeaders()
       },
-      body: formData
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
     
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Whisper API error:', response.status, error);
-      return res.status(response.status).json({ error: 'Transcription failed' });
-    }
+    console.log('Transcription result:', response.data.text);
     
-    const result = await response.json();
-    console.log('Transcription result:', result.text);
-    
-    res.json({ text: result.text });
+    res.json({ text: response.data.text });
     
   } catch (error) {
     console.error('Transcription error:', error);

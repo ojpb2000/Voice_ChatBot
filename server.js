@@ -11,8 +11,6 @@ const PORT = process.env.PORT || 3000;
 // Basic CORS: allow GitHub Pages, Vercel, and local dev; optionally ALLOWED_ORIGINS env (comma-separated)
 const defaultOrigins = [
   'https://ojpb2000.github.io',
-  'https://voice-chat-bot-kappa.vercel.app',
-  'https://voice-chat-bot-kappa.vercel.app',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://localhost:5500',
@@ -28,7 +26,20 @@ app.use(cors({
   origin: function(origin, callback) {
     // allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
+    
+    // Allow all Vercel domains
+    if (origin && origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Allow GitHub Pages
+    if (origin && origin.includes('github.io')) {
+      return callback(null, true);
+    }
+    
+    // Check allowed origins
     if (allowedOrigins.includes(origin)) return callback(null, true);
+    
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: false

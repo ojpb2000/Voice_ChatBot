@@ -23,6 +23,37 @@ const envOrigins = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
+// CORS middleware - must be before routes
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Allow all Vercel domains
+  if (origin && origin.endsWith('.vercel.app')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+  }
+  
+  // Allow GitHub Pages
+  if (origin && origin.includes('github.io')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+  }
+  
+  next();
+});
+
 app.use(cors({
   origin: function(origin, callback) {
     // allow requests with no origin (like mobile apps, curl)

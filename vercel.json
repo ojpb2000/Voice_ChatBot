@@ -1,11 +1,3 @@
 {
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "@vercel/node@3.0.7"
-    }
-  },
-  "outputDirectory": ".",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
-  "framework": null
+  "outputDirectory": "."
 }

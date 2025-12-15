@@ -4,7 +4,7 @@
   "description": "Chatbot de audio con ChatGPT para simular conversación con Jessica Taylor",
   "main": "server.js",
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "node server.js",

@@ -42,7 +42,11 @@ app.use(cors({
     
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: false
+  credentials: false,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json({ limit: '1mb' }));
@@ -101,6 +105,15 @@ app.post('/api/transcribe', async (req, res) => {
 });
 
 // Authentication endpoint
+app.options('/api/auth', (req, res) => {
+  // Handle preflight requests
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+  res.status(204).end();
+});
+
 app.post('/api/auth', (req, res) => {
   const { username, password } = req.body;
   

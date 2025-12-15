@@ -422,6 +422,23 @@ wss.on('connection', (clientWs) => {
         });
         
         openaiWs.on('message', (data) => {
+          // Forward both text and binary messages
+          try {
+            // Try to parse as JSON to log it
+            if (typeof data === 'string') {
+              const parsed = JSON.parse(data);
+              console.log('OpenAI -> Client:', parsed.type || 'unknown');
+              
+              // Log errors for debugging
+              if (parsed.type === 'error' || parsed.type === 'error_event') {
+                console.error('OpenAI error:', parsed);
+              }
+            }
+          } catch (e) {
+            // Binary data, just forward it
+            console.log('OpenAI -> Client: binary audio data');
+          }
+          
           clientWs.send(data);
         });
         
@@ -447,6 +464,19 @@ wss.on('connection', (clientWs) => {
         
       } else if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
         // Forward message to OpenAI
+        try {
+          const msgData = JSON.parse(message);
+          console.log('Client -> OpenAI:', msgData.type || 'unknown');
+          
+          // Log session.update for debugging
+          if (msgData.type === 'session.update') {
+            console.log('Session update config:', JSON.stringify(msgData.session, null, 2));
+          }
+        } catch (e) {
+          // Binary data or invalid JSON
+          console.log('Client -> OpenAI: binary or non-JSON data');
+        }
+        
         openaiWs.send(message);
       }
       

@@ -26,32 +26,40 @@ const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 // CORS middleware - must be before routes
 // Handle ALL OPTIONS requests first, before any other middleware
 app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  
-  // Allow all Vercel domains
-  if (origin && origin.endsWith('.vercel.app')) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    return res.status(204).end();
+  try {
+    const origin = req.headers.origin;
+    
+    // Allow all Vercel domains
+    if (origin && origin.endsWith('.vercel.app')) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      return res.status(204).end();
+    }
+    
+    // Allow GitHub Pages
+    if (origin && origin.includes('github.io')) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.setHeader('Access-Control-Max-Age', '86400');
+      return res.status(204).end();
+    }
+    
+    // Default: allow the origin if provided
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      res.setHeader('Access-Control-Max-Age', '86400');
+    }
+    
+    res.status(204).end();
+  } catch (error) {
+    console.error('Error in OPTIONS handler:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  
-  // Allow GitHub Pages
-  if (origin && origin.includes('github.io')) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    return res.status(204).end();
-  }
-  
-  // Default: allow if in allowed origins
-  res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  res.status(204).end();
 });
 
 app.use((req, res, next) => {

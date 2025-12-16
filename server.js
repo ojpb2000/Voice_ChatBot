@@ -466,13 +466,14 @@ wss.on('connection', (clientWs) => {
           return;
         }
         
-        // Try with minimal configuration first
+        // Use a valid model from the available list
+        // Default to gpt-4o-realtime-preview which is available
+        const modelToUse = process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview';
         const sessionConfig = {
-          // Try without model first to see if that's the issue
-          // model: process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview'
+          model: modelToUse
         };
         
-        console.log('Using OpenAI model:', process.env.OPENAI_MODEL || 'gpt-4o-realtime-preview');
+        console.log('Using OpenAI model:', modelToUse);
         console.log('Session config:', JSON.stringify(sessionConfig, null, 2));
         
         const response = await fetch('https://api.openai.com/v1/realtime/sessions', {

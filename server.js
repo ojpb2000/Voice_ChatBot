@@ -501,10 +501,25 @@ wss.on('connection', (clientWs) => {
         
         const sessionData = await response.json();
         console.log('OpenAI session created successfully:', sessionData.id);
+        console.log('Session data:', JSON.stringify(sessionData, null, 2));
         
-        // Connect to OpenAI Realtime - try without model parameter
-        const wsUrl = `wss://api.openai.com/v1/realtime?client_secret=${sessionData.client_secret}`;
-        console.log('Connecting to OpenAI WebSocket:', wsUrl);
+        // Extract client_secret - ensure it's a string
+        const clientSecret = typeof sessionData.client_secret === 'string' 
+          ? sessionData.client_secret 
+          : String(sessionData.client_secret || '');
+        
+        if (!clientSecret) {
+          console.error('No client_secret found in session data');
+          clientWs.send(JSON.stringify({ 
+            type: 'error', 
+            error: { message: 'No client_secret in session response' }
+          }));
+          return;
+        }
+        
+        // Connect to OpenAI Realtime
+        const wsUrl = `wss://api.openai.com/v1/realtime?client_secret=${clientSecret}`;
+        console.log('Connecting to OpenAI WebSocket:', wsUrl.replace(clientSecret, '[REDACTED]'));
         
         openaiWs = new WebSocket(wsUrl);
         

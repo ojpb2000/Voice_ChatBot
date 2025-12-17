@@ -491,23 +491,36 @@ let BACKEND_URL = '';
 function detectBackend() {
     // Configurable: asigna aquí tu URL de Render cuando esté desplegado
     // Ej: https://voice-chatbot-backend.onrender.com
-    BACKEND_URL = window.BACKEND_URL || '';
+    BACKEND_URL = window.BACKEND_URL || 'https://voice-chatbot-a9u5.onrender.com';
 
     if (!BACKEND_URL) {
         console.log('Backend no configurado. Usando simulación local.');
         backendAvailable = false;
+        updateConnectionStatus(false);
         return;
     }
 
-    fetch(`${BACKEND_URL}/api/health`, { method: 'GET' })
-        .then(r => r.json())
+    console.log('Checking backend availability at:', BACKEND_URL);
+    
+    fetch(`${BACKEND_URL}/api/health`, { 
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+    })
+        .then(r => {
+            console.log('Backend health check response status:', r.status);
+            return r.json();
+        })
         .then(data => {
+            console.log('Backend health check data:', data);
             backendAvailable = !!data?.ok;
+            console.log('Backend available:', backendAvailable);
             updateConnectionStatus(backendAvailable);
         })
-        .catch(() => {
+        .catch((error) => {
+            console.error('Backend health check failed:', error);
             backendAvailable = false;
             updateConnectionStatus(false);
+            console.log('Using local simulation mode');
         });
 }
 

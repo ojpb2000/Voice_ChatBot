@@ -384,10 +384,13 @@ async function handleResponse(userMessage) {
                 }
             );
             
-            if (streamingOk) {
-                console.log('Streaming response successful');
+            // Solo consideramos exitoso si hubo contenido real
+            if (streamingOk && accumulated.trim().length > 0) {
+                console.log('Streaming response successful with content');
                 return;
             }
+            
+            console.log('Streaming finished but no content, falling back to non-streaming...');
             
             console.log('Streaming failed, trying non-streaming...');
             

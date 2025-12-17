@@ -125,10 +125,12 @@
                 
                 // Check authentication on page load
                 document.addEventListener('DOMContentLoaded', function() {
-                    // Check authentication
-                    if (!sessionStorage.getItem('authenticated')) {
-                        window.location.href = 'login.html';
-                        return;
+                    // Check authentication - if not authenticated, show login screen (handled by script-simple.js)
+                    // Don't redirect to login.html, let the script handle it
+                    const isAuthenticated = sessionStorage.getItem('authenticated') === 'true';
+                    if (!isAuthenticated) {
+                        // The login screen is already in the DOM, script-simple.js will show it
+                        console.log('Not authenticated, showing login screen');
                     }
                 });
         </script>

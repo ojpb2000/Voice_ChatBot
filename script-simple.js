@@ -72,32 +72,90 @@ function setupEventListeners() {
     document.addEventListener('keydown', handleKeyboard);
 }
 
-// Check authentication (simplified for GitHub Pages)
+// Check authentication
 function checkAuthentication() {
-    // Force login screen by default
-    localStorage.removeItem('authenticated');
-    showLoginScreen();
+    // Check sessionStorage (same as index.html)
+    const isAuthenticated = sessionStorage.getItem('authenticated') === 'true';
+    
+    if (isAuthenticated) {
+        showChatScreen();
+    } else {
+        showLoginScreen();
+    }
 }
 
-// Handle login (demo)
-function handleLogin(e) {
+// Handle login
+async function handleLogin(e) {
     e.preventDefault();
     
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+    const loginBtn = loginForm.querySelector('button[type="submit"]');
+    const btnText = loginBtn.querySelector('.btn-text');
+    const btnLoading = loginBtn.querySelector('.btn-loading');
     
-    // Demo credentials
-    if (username === 'gato' && password === 'gato123') {
-        localStorage.setItem('authenticated', 'true');
-        showChatScreen();
-    } else {
-        showError('Invalid credentials');
+    // Show loading state
+    loginBtn.disabled = true;
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    hideError();
+    
+    try {
+        // Try backend authentication first
+        const BACKEND_URL = window.BACKEND_URL || '';
+        if (BACKEND_URL) {
+            const response = await fetch(`${BACKEND_URL}/api/auth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                // Store in sessionStorage (same as index.html expects)
+                sessionStorage.setItem('authenticated', 'true');
+                sessionStorage.setItem('username', username);
+                showChatScreen();
+                return;
+            }
+        }
+        
+        // Fallback to local credentials
+        if (username === 'gato' && password === 'gato123') {
+            sessionStorage.setItem('authenticated', 'true');
+            sessionStorage.setItem('username', username);
+            showChatScreen();
+        } else {
+            showError('Invalid credentials. Please try again.');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        // Fallback to local credentials on network error
+        if (username === 'gato' && password === 'gato123') {
+            sessionStorage.setItem('authenticated', 'true');
+            sessionStorage.setItem('username', username);
+            showChatScreen();
+        } else {
+            showError('Connection error. Using local authentication.');
+            if (username === 'gato' && password === 'gato123') {
+                sessionStorage.setItem('authenticated', 'true');
+                sessionStorage.setItem('username', username);
+                showChatScreen();
+            }
+        }
+    } finally {
+        // Reset button state
+        loginBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
     }
 }
 
 // Handle logout
 function handleLogout() {
-    localStorage.removeItem('authenticated');
+    sessionStorage.removeItem('authenticated');
+    sessionStorage.removeItem('username');
     showLoginScreen();
 }
 

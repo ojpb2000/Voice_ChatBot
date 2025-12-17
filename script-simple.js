@@ -19,6 +19,8 @@ const voiceStatus = document.getElementById('voiceStatus');
 const voiceLevel = document.getElementById('voiceLevel');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const connectionStatus = document.getElementById('connectionStatus');
+const textInput = document.getElementById('textInput');
+const sendTextBtn = document.getElementById('sendTextBtn');
 
 // Initialization
 document.addEventListener('DOMContentLoaded', function() {
@@ -58,18 +60,59 @@ function initializeApp() {
 // Setup event listeners
 function setupEventListeners() {
     // Login form
-    loginForm.addEventListener('submit', handleLogin);
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
 
     // Logout
-    logoutBtn.addEventListener('click', handleLogout);
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
 
     // Audio controls
-    startListeningBtn.addEventListener('click', startListening);
-    stopListeningBtn.addEventListener('click', stopListening);
-    speakResponseBtn.addEventListener('click', speakLastResponse);
+    if (startListeningBtn) {
+        startListeningBtn.addEventListener('click', startListening);
+    }
+    if (stopListeningBtn) {
+        stopListeningBtn.addEventListener('click', stopListening);
+    }
+    if (speakResponseBtn) {
+        speakResponseBtn.addEventListener('click', speakLastResponse);
+    }
+
+    // Text input
+    if (textInput) {
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendTextMessage();
+            }
+        });
+    }
+    if (sendTextBtn) {
+        sendTextBtn.addEventListener('click', sendTextMessage);
+    }
 
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyboard);
+}
+
+// Send text message
+function sendTextMessage() {
+    if (!textInput || !textInput.value.trim()) {
+        return;
+    }
+    
+    const message = textInput.value.trim();
+    console.log('Sending text message:', message);
+    
+    // Add user message
+    addMessage(message, 'user');
+    
+    // Clear input
+    textInput.value = '';
+    
+    // Handle response
+    handleResponse(message);
 }
 
 // Check authentication
@@ -320,87 +363,122 @@ function updateListeningUI(listening) {
 }
 
 async function handleResponse(userMessage) {
+    console.log('handleResponse called with:', userMessage);
+    console.log('backendAvailable:', backendAvailable);
+    
     // Intentar backend primero
-    if (backendAvailable) {
+    if (backendAvailable && BACKEND_URL) {
+        console.log('Attempting backend response...');
         showTypingIndicator();
         let accumulated = '';
-        const streamingOk = await streamFromBackend(
-            userMessage,
-            (token) => {
-                accumulated += token;
-                renderStreaming(accumulated);
-            },
-            () => {
-                finalizeStreaming(accumulated);
+        
+        try {
+            const streamingOk = await streamFromBackend(
+                userMessage,
+                (token) => {
+                    accumulated += token;
+                    renderStreaming(accumulated);
+                },
+                () => {
+                    finalizeStreaming(accumulated);
+                }
+            );
+            
+            if (streamingOk) {
+                console.log('Streaming response successful');
+                return;
             }
-        );
-        if (streamingOk) return;
-
-        // Fallback to non-streaming
-        const backendReply = await sendToBackend(userMessage);
-        if (backendReply) {
-            addMessage(backendReply, 'bot');
-            speakText(backendReply);
+            
+            console.log('Streaming failed, trying non-streaming...');
+            
+            // Fallback to non-streaming
+            const backendReply = await sendToBackend(userMessage);
+            if (backendReply) {
+                console.log('Backend reply received:', backendReply);
+                addMessage(backendReply, 'bot');
+                speakText(backendReply);
+                hideTypingIndicator();
+                return;
+            }
+            
+            console.log('Backend failed, falling back to simulation');
             hideTypingIndicator();
-            return;
+        } catch (error) {
+            console.error('Error in handleResponse:', error);
+            hideTypingIndicator();
         }
-        hideTypingIndicator();
+    } else {
+        console.log('Backend not available, using simulation');
     }
 
     // Simular respuesta de Jessica (sin API externa)
+    console.log('Using simulated response');
     simulateJessicaResponse(userMessage);
 }
 
 // Local simulation
 function simulateJessicaResponse(userMessage) {
+    console.log('simulateJessicaResponse called with:', userMessage);
+    
     // Mostrar indicador de "typing" más rápido
     showTypingIndicator();
     
     // Simular delay de API (reducido para mejor experiencia)
     setTimeout(() => {
-        const message = userMessage.toLowerCase();
-        let response = "";
-        
-        // Authentic contextual responses (English)
-        if (message.includes('hola') || message.includes('hi') || message.includes('hello')) {
-            response = "Hi! I'm Jessica, 32, living in West Virginia. I was diagnosed with Type 1 in my teens. How are you managing things today?";
-        } else if (message.includes('diabetes') || message.includes('azúcar') || message.includes('glucosa')) {
-            response = "I've used pumps and CGMs for years. Tech helps, but some days are still tough and the mental load is real.";
-        } else if (message.includes('costo') || message.includes('dinero') || message.includes('caro') || message.includes('seguro')) {
-            response = "Costs are tough. On a $60–65k household income, every device is a big decision, and insurance paperwork can be exhausting.";
-        } else if (message.includes('alarma') || message.includes('ruido') || message.includes('molesto') || message.includes('fatiga')) {
-            response = "Alarm fatigue is real. I want devices that are discreet and reliable so diabetes doesn’t take over every moment.";
-        } else if (message.includes('comunidad') || message.includes('ayuda') || message.includes('apoyo') || message.includes('reddit')) {
-            response = "Reddit and T1D Twitter help a lot—hacks, honest chats, and support for the rough days. Community matters.";
-        } else if (message.includes('comida') || message.includes('receta') || message.includes('cocinar') || message.includes('pinterest')) {
-            response = "I love finding low‑carb recipes on Pinterest. My partner and I try to keep things tasty but balanced.";
-        } else if (message.includes('ejercicio') || message.includes('deporte') || message.includes('actividad') || message.includes('viaje')) {
-            response = "I want an active life without diabetes getting in the way—exercise and travel take extra planning, which can be tiring.";
-        } else if (message.includes('día') || message.includes('dificil') || message.includes('malo') || message.includes('estres')) {
-            response = "Some days my numbers are great, others are chaos. I try not to be too hard on myself—diabetes is part of life, not all of it.";
-        } else if (message.includes('tecnologia') || message.includes('dispositivo') || message.includes('bomba') || message.includes('cgm')) {
-            response = "I follow new tech on Reddit/Twitter—there’s excitement and skepticism. I care most about reliability, discretion, and easy data sharing.";
-        } else if (message.includes('trabajo') || message.includes('carrera') || message.includes('profesional')) {
-            response = "I’m a college grad and work in a suburban area. Managing alarms during meetings can be awkward, so I plan ahead.";
-        } else {
-            // General authentic responses
-            const generalResponses = [
-                "As someone with T1D, I get the unique challenges. The constant monitoring can be draining, so I stay proactive.",
-                "I value independence but also community—people on Reddit and Twitter really understand this life.",
-                "I’m always balancing health with enjoying life. I don’t want diabetes to define me, even if it shapes my days.",
-                "Tech helps a lot, but some days everything seems to fail at once. Having a Plan B keeps me sane.",
-                "Authenticity matters. We want brands and people to truly get it without sugarcoating."
-            ];
-            response = generalResponses[Math.floor(Math.random() * generalResponses.length)];
+        try {
+            const message = userMessage.toLowerCase();
+            let response = "";
+            
+            console.log('Processing message:', message);
+            
+            // Authentic contextual responses (English)
+            if (message.includes('hola') || message.includes('hi') || message.includes('hello') || message.includes('how are you')) {
+                response = "Hi! I'm Jessica, 32, living in West Virginia. I was diagnosed with Type 1 in my teens. How are you managing things today?";
+            } else if (message.includes('diabetes') || message.includes('azúcar') || message.includes('glucosa')) {
+                response = "I've used pumps and CGMs for years. Tech helps, but some days are still tough and the mental load is real.";
+            } else if (message.includes('costo') || message.includes('dinero') || message.includes('caro') || message.includes('seguro')) {
+                response = "Costs are tough. On a $60–65k household income, every device is a big decision, and insurance paperwork can be exhausting.";
+            } else if (message.includes('alarma') || message.includes('ruido') || message.includes('molesto') || message.includes('fatiga')) {
+                response = "Alarm fatigue is real. I want devices that are discreet and reliable so diabetes doesn't take over every moment.";
+            } else if (message.includes('comunidad') || message.includes('ayuda') || message.includes('apoyo') || message.includes('reddit')) {
+                response = "Reddit and T1D Twitter help a lot—hacks, honest chats, and support for the rough days. Community matters.";
+            } else if (message.includes('comida') || message.includes('receta') || message.includes('cocinar') || message.includes('pinterest')) {
+                response = "I love finding low‑carb recipes on Pinterest. My partner and I try to keep things tasty but balanced.";
+            } else if (message.includes('ejercicio') || message.includes('deporte') || message.includes('actividad') || message.includes('viaje')) {
+                response = "I want an active life without diabetes getting in the way—exercise and travel take extra planning, which can be tiring.";
+            } else if (message.includes('día') || message.includes('dificil') || message.includes('malo') || message.includes('estres')) {
+                response = "Some days my numbers are great, others are chaos. I try not to be too hard on myself—diabetes is part of life, not all of it.";
+            } else if (message.includes('tecnologia') || message.includes('dispositivo') || message.includes('bomba') || message.includes('cgm')) {
+                response = "I follow new tech on Reddit/Twitter—there's excitement and skepticism. I care most about reliability, discretion, and easy data sharing.";
+            } else if (message.includes('trabajo') || message.includes('carrera') || message.includes('profesional')) {
+                response = "I'm a college grad and work in a suburban area. Managing alarms during meetings can be awkward, so I plan ahead.";
+            } else {
+                // General authentic responses
+                const generalResponses = [
+                    "As someone with T1D, I get the unique challenges. The constant monitoring can be draining, so I stay proactive.",
+                    "I value independence but also community—people on Reddit and Twitter really understand this life.",
+                    "I'm always balancing health with enjoying life. I don't want diabetes to define me, even if it shapes my days.",
+                    "Tech helps a lot, but some days everything seems to fail at once. Having a Plan B keeps me sane.",
+                    "Authenticity matters. We want brands and people to truly get it without sugarcoating."
+                ];
+                response = generalResponses[Math.floor(Math.random() * generalResponses.length)];
+            }
+            
+            console.log('Generated response:', response);
+            
+            // Agregar respuesta del bot
+            addMessage(response, 'bot');
+            
+            // Hablar la respuesta
+            speakText(response);
+            
+            hideTypingIndicator();
+        } catch (error) {
+            console.error('Error in simulateJessicaResponse:', error);
+            hideTypingIndicator();
+            // Fallback response
+            addMessage("I'm sorry, I'm having trouble processing that. Could you try again?", 'bot');
         }
-        
-        // Agregar respuesta del bot
-        addMessage(response, 'bot');
-        
-        // Hablar la respuesta
-        speakText(response);
-        
-        hideTypingIndicator();
     }, 800);
 }
 
